@@ -34,17 +34,16 @@ export class GasWarningService {
 
   //Gửi yêu cầu xác minh device
   async verifyDevice(deviceId: string) {
-    await this.client.emit(MQTT_TOPICS.DEVICE, deviceId);
     const device = await this.deviceService.getDeviceById(deviceId);
     if (device) {
-      this.client.emit(MQTT_TOPICS.DEVICE, deviceId);
+      this.client.emit(MQTT_TOPICS.DEVICE, { deviceId });
     }
   }
 
   //Điều khiển cảnh báo
-  async warningControl(data: WarningControlDto) {
+  async warningControl(message: string) {
     //await this.deviceService.getDeviceById(data.deviceIddeviceId);
-    await this.client.emit(MQTT_TOPICS.WARNING_CONTROL, data);
+    await this.client.emit(MQTT_TOPICS.WARNING_CONTROL, { message });
   }
 
   //Nhận dữ liệu nhiệt độ

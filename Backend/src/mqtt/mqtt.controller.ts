@@ -20,21 +20,21 @@ export class MqttController {
   ) {}
 
   //kết nối device
-  @Post('gas')
-  async getDevice(@Body() deviceId: string) {
+  @Post(':deviceId')
+  async getDevice(@Param('deviceId') deviceId: string) {
     this.gasWarningService.verifyDevice(deviceId);
   }
 
   //Nhận phản hồi từ device
   @EventPattern(MQTT_TOPICS.DEVICE)
   getDeviceNotifications(@Payload() data: string, @Ctx() context: MqttContext) {
-    console.log('Received data', data);
+    console.log('Received data:', data);
   }
 
   //Điều khiển cảnh báo
   @Post('gas/warning')
-  async publishMessage(@Body() data: WarningControlDto) {
-    this.gasWarningService.warningControl(data);
+  async publishMessage(@Body('message') message: string) {
+    this.gasWarningService.warningControl(message);
   }
 
   //Nhận dữ liệu nhiệt độ
