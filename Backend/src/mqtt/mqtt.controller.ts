@@ -32,9 +32,9 @@ export class MqttController {
   }
 
   //Điều khiển cảnh báo
-  @Post('gas/warning')
-  async publishMessage(@Body('message') message: string) {
-    this.gasWarningService.warningControl(message);
+  @Post('gas/warning/:state')
+  async publishMessage(@Param('state') state: string) {
+    this.gasWarningService.warningControl(state);
   }
 
   //Nhận dữ liệu nhiệt độ
@@ -53,5 +53,13 @@ export class MqttController {
   @MessagePattern(MQTT_TOPICS.GASLEVEL)
   getNotificationsGas(@Payload() data: number[], @Ctx() context: MqttContext) {
     this.gasWarningService.getGasLevel(data);
+  }
+
+  @MessagePattern(MQTT_TOPICS.WARNING_CONTROL)
+  getNotificationsWarning(
+    @Payload() data: number[],
+    @Ctx() context: MqttContext,
+  ) {
+    console.log('Received data:', data);
   }
 }

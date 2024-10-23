@@ -41,9 +41,9 @@ export class GasWarningService {
   }
 
   //Điều khiển cảnh báo
-  async warningControl(message: string) {
+  async warningControl(state: string) {
     //await this.deviceService.getDeviceById(data.deviceIddeviceId);
-    await this.client.emit(MQTT_TOPICS.WARNING_CONTROL, { message });
+    await this.client.emit(MQTT_TOPICS.WARNING_CONTROL, { state });
   }
 
   //Nhận dữ liệu nhiệt độ
