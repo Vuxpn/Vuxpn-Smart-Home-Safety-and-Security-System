@@ -28,7 +28,7 @@ export class MqttController {
   //Nhận phản hồi từ device
   @EventPattern(MQTT_TOPICS.DEVICE)
   getDeviceNotifications(@Payload() data: string, @Ctx() context: MqttContext) {
-    console.log('Received data:', data);
+    console.log('Received data', data);
   }
 
   //Điều khiển cảnh báo
