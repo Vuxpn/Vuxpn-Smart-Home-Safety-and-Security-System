@@ -65,19 +65,24 @@ export class DevicesController {
     this.devicesService.handleVerificationResponse(deviceId, data.verified);
   }
 
-  @Patch('state')
+  @Post(':deviceId/connect')
   @UseGuards(DeviceGuard)
-  async updateStatus(@Body() updateDto: UpdateDeviceDto) {
-    return this.devicesService.updateState(updateDto);
+  async connectDevice(@Param('deviceId') deviceId: string) {
+    //Khởi tạo quá trình kết nối
+    const connect = this.devicesService.connectDevice(deviceId);
+    //Gửi yêu cầu kết nối
+    this.devicesService.publishConnectDevice(deviceId);
+    return connect;
   }
 
-  @Post(':deviceId/connect')
-  async connectDevice(@Param('deviceId') deviceId: string) {
-    try {
-      await this.devicesService.connectDevice(deviceId);
-      return { message: 'Device connected successfully' };
-    } catch (error) {
-      throw new InternalServerErrorException('Failed to connect device');
-    }
+  @MessagePattern(MQTT_TOPICS.RESPONSECONNECTDEVICE)
+  async handleDeviceConnect(
+    @Payload() data: { connected: boolean; deviceId: string },
+    @Ctx() context: MqttContext,
+  ) {
+    const topic = context.getTopic();
+    const deviceId = topic.split('/')[2];
+
+    this.devicesService.handleConnectResponse(deviceId, data.connected);
   }
 }

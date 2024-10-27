@@ -8,7 +8,7 @@ export class Device {
   @Prop({ required: true })
   name: string;
 
-  @Prop({ enum: ['ACTIVE', 'INACTIVE'], default: 'ACTIVE' })
+  @Prop({ enum: ['ACTIVE', 'INACTIVE'], default: 'INACTIVE' })
   state: string;
 
   @Prop()

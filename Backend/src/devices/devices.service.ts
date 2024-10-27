@@ -12,14 +12,24 @@ import { Device } from '../schema/device.schema';
 import { Model } from 'mongoose';
 import { ClientProxy } from '@nestjs/microservices';
 import { MQTT_TOPICS } from 'src/mqtt/mqtt.constants';
+import { connected } from 'process';
 
 @Injectable()
 export class DevicesService {
+  //Map lưu timeout khi yêu cầu verified device
   private readonly verificationTimeouts: Map<string, NodeJS.Timeout> =
     new Map();
+
+  //Map lưu callback xác thực từ device
   private readonly verificationCallbacks: Map<
     string,
     (verified: boolean) => void
+  > = new Map();
+
+  //Map lưu callback kết nối từ device
+  private readonly connectionCallbacks: Map<
+    string,
+    (connected: boolean) => void
   > = new Map();
   readonly clientId = 'vuphan';
   constructor(
@@ -40,22 +50,14 @@ export class DevicesService {
     return device;
   }
 
-  async updateState(updateDto: UpdateDeviceDto) {
-    const device = await this.deviceModel.findOneAndUpdate(
-      { deviceId: updateDto.deviceID },
-      { state: updateDto.state },
-      { new: true },
-    );
-    if (!device) {
-      throw new HttpException('Không tìm thấy thiết bị', HttpStatus.NOT_FOUND);
-    }
-    return device;
-  }
-
   async createDevice(device: CreateDeviceDto) {
     const newDevice = { ...device };
     await this.deviceModel.create(newDevice);
     return newDevice;
+  }
+
+  async updateState(deviceId: string): Promise<void> {
+    await this.deviceModel.updateOne({ deviceId }, { state: 'ACTIVE' });
   }
 
   async updateLastConnected(deviceId: string): Promise<void> {
@@ -96,9 +98,40 @@ export class DevicesService {
     });
   }
 
+  async connectDevice(deviceId: string): Promise<{ message: string }> {
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        this.connectionCallbacks.delete(deviceId);
+        reject(new Error('Connection timeout'));
+      }, 30000);
+      this.verificationTimeouts.set(deviceId, timeout);
+      this.connectionCallbacks.set(deviceId, async (connected: boolean) => {
+        if (connected) {
+          await this.updateState(deviceId);
+          resolve({ message: 'Device connected successfully' });
+        } else {
+          reject(new Error('Device connection failed'));
+        }
+        this.connectionCallbacks.delete(deviceId);
+      });
+    });
+  }
+
   publishVerifyDevice(deviceId: string) {
     const topic = `${MQTT_TOPICS.CREATEDEVICE}/${deviceId}`;
     const message = { deviceId, action: 'verify' };
+    return this.client.emit(topic, message);
+  }
+
+  publishConnectDevice(deviceId: string) {
+    const topic = `${MQTT_TOPICS.CONNECTDEVICE}/${deviceId}`;
+    const message = { deviceId, action: 'connect' };
+    return this.client.emit(topic, message);
+  }
+
+  publishDisconnectDevice(deviceId: string) {
+    const topic = `${MQTT_TOPICS.DISCONNECTDEVICE}/${deviceId}`;
+    const message = { deviceId, action: 'disconnect' };
     return this.client.emit(topic, message);
   }
 
@@ -112,11 +145,15 @@ export class DevicesService {
     }
   }
 
-  async connectDevice(deviceId: string) {
-    this.client.emit(`${MQTT_TOPICS.CONNECTDEVICE}/${deviceId}`, {
-      connect: 'true',
-    });
+  handleConnectResponse(deviceId: string, connected: boolean) {
+    // Lấy callback function đã lưu trước đó
+    const callback = this.connectionCallbacks.get(deviceId);
+    if (callback) {
+      callback(connected);
+      this.cleanupVerification(deviceId);
+    }
   }
+
   private cleanupVerification(deviceId: string) {
     const timeout = this.verificationTimeouts.get(deviceId);
     if (timeout) clearTimeout(timeout);

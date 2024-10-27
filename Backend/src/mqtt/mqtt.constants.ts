@@ -2,10 +2,16 @@
 export const MQTT_TOPICS = {
   //Create device
   CREATEDEVICE: 'iot/device/create',
-  //Handle response device
+  //Response verify device
   RESPONSEDEVICE: 'iot/device/+/response',
   //Connect device
   CONNECTDEVICE: 'iot/device/connect',
+  //Response connect device
+  RESPONSECONNECTDEVICE: 'iot/device/+/connect/response',
+  //Disconnect device
+  DISCONNECTDEVICE: 'iot/device/disconnect',
+  //Response disconnect device
+  RESPONSEDISCONNECTDEVICE: 'iot/device/+/disconnect/response',
   // Sensor data (ESP32 -> Server)
   TEMPERATURE: `iot/device//temperature`,
   HUMIDITY: `iot/device//humidity`,
