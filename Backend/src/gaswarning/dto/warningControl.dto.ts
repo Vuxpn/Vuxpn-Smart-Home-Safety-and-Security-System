@@ -1,4 +1,4 @@
 export class WarningControlDto {
-  message: string; // true: on, false: off
-  //deviceId: string;
+  deviceId: string;
+  state: string; // true: on, false: off
 }

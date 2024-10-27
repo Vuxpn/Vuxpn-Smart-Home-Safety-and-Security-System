@@ -1,10 +1,11 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ClientsModule, Transport } from '@nestjs/microservices';
-import { MqttController } from './mqtt.controller';
 import { GasWarningService } from 'src/gaswarning/gasWarning.service';
 import { GasWarningModule } from 'src/gaswarning/gasWarning.module';
 import { DevicesModule } from 'src/devices/devices.module';
+import { DevicesService } from 'src/devices/devices.service';
+import { GasWarningController } from 'src/gaswarning/gasWarning.controller';
 
 @Module({
   imports: [
@@ -30,10 +31,10 @@ import { DevicesModule } from 'src/devices/devices.module';
         inject: [ConfigService],
       },
     ]),
-    DevicesModule,
+    forwardRef(() => DevicesModule),
   ],
-  controllers: [MqttController],
-  providers: [GasWarningService],
+  controllers: [GasWarningController],
+  providers: [GasWarningService, DevicesService],
   exports: [ClientsModule],
 })
 export class MqttModule {}

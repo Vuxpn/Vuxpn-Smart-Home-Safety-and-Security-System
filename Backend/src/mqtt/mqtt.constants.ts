@@ -1,11 +1,15 @@
 // mqtt.constants.ts
 export const MQTT_TOPICS = {
+  //Create device
+  CREATEDEVICE: 'iot/device/create',
+  //Handle response device
+  RESPONSEDEVICE: 'iot/device/+/response',
   //Connect device
-  DEVICE: 'iot/device/gas/connect',
+  CONNECTDEVICE: 'iot/device/connect',
   // Sensor data (ESP32 -> Server)
-  TEMPERATURE: 'iot/temperature',
-  HUMIDITY: 'iot/humidity',
-  GASLEVEL: 'iot/gaslevel',
+  TEMPERATURE: `iot/device//temperature`,
+  HUMIDITY: `iot/device//humidity`,
+  GASLEVEL: `iot/device//gaslevel`,
 
   // Warning control (Server -> ESP32)
   WARNING_CONTROL: 'iot/warning/control',

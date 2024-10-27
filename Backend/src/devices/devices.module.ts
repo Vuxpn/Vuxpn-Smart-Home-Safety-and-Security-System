@@ -1,18 +1,29 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { DevicesController } from './devices.controller';
 import { DevicesService } from './devices.service';
 import { MongooseModule } from '@nestjs/mongoose';
-import { Device, deviceSchema } from './device.schema';
+import { Device, DeviceSchema } from '../schema/device.schema';
+import { DeviceGuard } from './device.guard';
+import { MqttModule } from 'src/mqtt/mqtt.module';
 
 @Module({
   imports: [
     MongooseModule.forFeature(
-      [{ name: Device.name, schema: deviceSchema }],
+      [{ name: Device.name, schema: DeviceSchema }],
+      'device',
+    ),
+    forwardRef(() => MqttModule),
+  ],
+  controllers: [DevicesController],
+  providers: [DevicesService, DeviceGuard],
+  exports: [
+    DevicesService,
+    DevicesModule,
+    DeviceGuard,
+    MongooseModule.forFeature(
+      [{ name: Device.name, schema: DeviceSchema }],
       'device',
     ),
   ],
-  controllers: [DevicesController],
-  providers: [DevicesService],
-  exports: [DevicesService],
 })
 export class DevicesModule {}

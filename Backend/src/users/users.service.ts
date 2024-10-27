@@ -1,6 +1,6 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { User } from './schema/user.schema';
+import { User } from '../schema/user.schema';
 import { Model } from 'mongoose';
 import CreateUserDto from './dto/createUser.dto';
 

@@ -3,6 +3,7 @@ import { Module, forwardRef } from '@nestjs/common';
 import { ClientsModule } from '@nestjs/microservices';
 import { MqttModule } from 'src/mqtt/mqtt.module';
 import { DevicesModule } from 'src/devices/devices.module';
+import { DevicesService } from 'src/devices/devices.service';
 
 @Module({
   imports: [],
