@@ -66,7 +66,6 @@ export class DevicesController {
   }
 
   @Post(':deviceId/connect')
-  @UseGuards(DeviceGuard)
   async connectDevice(@Param('deviceId') deviceId: string) {
     //Khởi tạo quá trình kết nối
     const connect = this.devicesService.connectDevice(deviceId);
@@ -84,5 +83,26 @@ export class DevicesController {
     const deviceId = topic.split('/')[2];
 
     this.devicesService.handleConnectResponse(deviceId, data.connected);
+  }
+
+  @Post(':deviceId/disconnect')
+  @UseGuards(DeviceGuard)
+  async disconnectDevice(@Param('deviceId') deviceId: string) {
+    //Khởi tạo quá trình ngắt kết nối
+    const disconnect = this.devicesService.disconnectDevice(deviceId);
+    //Gửi yêu cầu ngắt kết nối
+    this.devicesService.publishDisconnectDevice(deviceId);
+    return disconnect;
+  }
+
+  @MessagePattern(MQTT_TOPICS.RESPONSEDISCONNECTDEVICE)
+  async handleDeviceDisconnect(
+    @Payload() data: { disconnected: boolean; deviceId: string },
+    @Ctx() context: MqttContext,
+  ) {
+    const topic = context.getTopic();
+    const deviceId = topic.split('/')[2];
+
+    this.devicesService.handleDisconnectResponse(deviceId, data.disconnected);
   }
 }

@@ -31,6 +31,12 @@ export class DevicesService {
     string,
     (connected: boolean) => void
   > = new Map();
+
+  //Map lưu callback ngắt kết nối từ device
+  private readonly disconnectionCallbacks: Map<
+    string,
+    (disconnected: boolean) => void
+  > = new Map();
   readonly clientId = 'vuphan';
   constructor(
     @Inject('MQTT_CLIENT') private readonly client: ClientProxy,
@@ -56,8 +62,12 @@ export class DevicesService {
     return newDevice;
   }
 
-  async updateState(deviceId: string): Promise<void> {
+  async updateConnectState(deviceId: string): Promise<void> {
     await this.deviceModel.updateOne({ deviceId }, { state: 'ACTIVE' });
+  }
+
+  async updateDisconnectState(deviceId: string): Promise<void> {
+    await this.deviceModel.updateOne({ deviceId }, { state: 'INACTIVE' });
   }
 
   async updateLastConnected(deviceId: string): Promise<void> {
@@ -99,6 +109,7 @@ export class DevicesService {
   }
 
   async connectDevice(deviceId: string): Promise<{ message: string }> {
+    this.getDeviceById(deviceId);
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         this.connectionCallbacks.delete(deviceId);
@@ -107,13 +118,35 @@ export class DevicesService {
       this.verificationTimeouts.set(deviceId, timeout);
       this.connectionCallbacks.set(deviceId, async (connected: boolean) => {
         if (connected) {
-          await this.updateState(deviceId);
+          await this.updateConnectState(deviceId);
           resolve({ message: 'Device connected successfully' });
         } else {
           reject(new Error('Device connection failed'));
         }
         this.connectionCallbacks.delete(deviceId);
       });
+    });
+  }
+
+  async disconnectDevice(deviceId: string): Promise<{ message: string }> {
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        this.disconnectionCallbacks.delete(deviceId);
+        reject(new Error('Connection timeout'));
+      }, 30000);
+      this.verificationTimeouts.set(deviceId, timeout);
+      this.disconnectionCallbacks.set(
+        deviceId,
+        async (disconnected: boolean) => {
+          if (disconnected) {
+            await this.updateDisconnectState(deviceId);
+            resolve({ message: 'Device disconnected successfully' });
+          } else {
+            reject(new Error('Device disconnection failed'));
+          }
+          this.disconnectionCallbacks.delete(deviceId);
+        },
+      );
     });
   }
 
@@ -150,6 +183,15 @@ export class DevicesService {
     const callback = this.connectionCallbacks.get(deviceId);
     if (callback) {
       callback(connected);
+      this.cleanupVerification(deviceId);
+    }
+  }
+
+  handleDisconnectResponse(deviceId: string, disconnected: boolean) {
+    // Lấy callback function đã lưu trước đó
+    const callback = this.disconnectionCallbacks.get(deviceId);
+    if (callback) {
+      callback(disconnected);
       this.cleanupVerification(deviceId);
     }
   }
