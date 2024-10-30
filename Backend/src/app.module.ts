@@ -7,6 +7,7 @@ import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { MqttModule } from './mqtt/mqtt.module';
 import { DevicesModule } from './devices/devices.module';
+import { HomesModule } from './home/homes.module';
 
 @Module({
   imports: [
@@ -23,11 +24,15 @@ import { DevicesModule } from './devices/devices.module';
     MongooseModule.forRoot(`mongodb://localhost:27017/device`, {
       connectionName: 'device',
     }),
+    MongooseModule.forRoot(`mongodb://localhost:27017/home`, {
+      connectionName: 'home',
+    }),
     PostsModule,
     UsersModule,
     AuthModule,
     MqttModule,
     DevicesModule,
+    HomesModule,
   ],
   controllers: [],
   providers: [],

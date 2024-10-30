@@ -24,7 +24,7 @@ import { DevicesService } from 'src/devices/devices.service';
 import { warn } from 'console';
 import { WarningValueDto } from './dto/warningValue.dto';
 
-@Controller('home')
+@Controller('device')
 export class GasWarningController {
   constructor(
     @Inject('MQTT_CLIENT') private readonly client: ClientProxy,
