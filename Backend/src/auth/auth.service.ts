@@ -8,6 +8,7 @@ import { UsersService } from 'src/users/users.service';
 import RegisterDto from './dto/register.dto';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
+import { ChangePasswordDto } from './dto/changePassword.dto';
 
 @Injectable()
 export class AuthService {
@@ -62,6 +63,52 @@ export class AuthService {
       throw new HttpException(
         'Wrong credentials provided',
         HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  async changePassword(email: string, changePasswordDto: ChangePasswordDto) {
+    try {
+      const user = await this.userService.getUserByEmail(email);
+      if (!user) {
+        throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+      }
+
+      // Verify old password
+      await this.verifyPassword(changePasswordDto.oldPassword, user.password);
+
+      // Check if new password is same as old password
+      const isSamePassword = await bcrypt.compare(
+        changePasswordDto.newPassword,
+        user.password,
+      );
+      if (isSamePassword) {
+        throw new HttpException(
+          'New password must be different from old password',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      // Hash new password
+      const hashedNewPassword = await bcrypt.hash(
+        changePasswordDto.newPassword,
+        10,
+      );
+
+      // Update password in database
+      await this.userService.updateUserPassword(email, hashedNewPassword);
+
+      return {
+        message: 'Password changed successfully',
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException(
+        'Failed to change password',
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }

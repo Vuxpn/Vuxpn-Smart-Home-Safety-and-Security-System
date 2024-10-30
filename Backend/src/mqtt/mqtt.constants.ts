@@ -13,13 +13,14 @@ export const MQTT_TOPICS = {
   //Response disconnect device
   RESPONSEDISCONNECTDEVICE: 'iot/device/+/disconnect/response',
   // Sensor data (ESP32 -> Server)
-  TEMPERATURE: `iot/device//temperature`,
-  HUMIDITY: `iot/device//humidity`,
-  GASLEVEL: `iot/device//gaslevel`,
+  TEMPERATURE: `iot/device/temperature`,
+  HUMIDITY: `iot/device/humidity`,
+  GASLEVEL: `iot/device/gaslevel`,
 
   // Warning control (Server -> ESP32)
-  WARNING_CONTROL: 'iot/warning/control',
+  WARNING_CONTROL: 'iot/device/warning/control',
 
   // Warning status (ESP32 -> Server)
   WARNING_STATUS: 'iot/warning/status',
+  WARNING_CHANGE_VALUE: 'iot/warning/change',
 };

@@ -16,8 +16,8 @@ export class UsersService {
     } // Ném lỗi nếu không tìm thấy
   }
 
-  getUserById(id: string) {
-    const user = this.userModel.findById(id);
+  async getUserById(userId: string) {
+    const user = await this.userModel.findById(userId);
     if (user) {
       return user;
     }
@@ -27,5 +27,19 @@ export class UsersService {
   async createUser(userData: CreateUserDto) {
     const newUser = await this.userModel.create(userData);
     return newUser;
+  }
+
+  async updateUserPassword(email: string, hashedPassword: string) {
+    const result = await this.userModel.findOneAndUpdate(
+      { email: email },
+      { password: hashedPassword },
+      { new: true },
+    );
+
+    if (!result) {
+      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    }
+
+    return result;
   }
 }

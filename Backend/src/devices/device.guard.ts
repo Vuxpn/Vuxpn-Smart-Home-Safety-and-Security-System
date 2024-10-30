@@ -27,10 +27,13 @@ export class DeviceGuard implements CanActivate {
     //Tìm device trong db
     const device = await this.deviceModel.findOne({
       deviceId,
+      state: 'ACTIVE',
     });
 
     if (!device) {
-      throw new UnauthorizedException('Device không tìm thấy ');
+      throw new UnauthorizedException(
+        'Device không tìm thấy hoặc chưa kích hoạt',
+      );
     }
 
     //gán device vào request object để sử dụng sau này

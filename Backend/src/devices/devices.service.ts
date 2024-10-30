@@ -62,6 +62,14 @@ export class DevicesService {
     return newDevice;
   }
 
+  async deleteDevice(deviceId: string) {
+    const device = await this.deviceModel.findOneAndDelete({ deviceId });
+    if (!device) {
+      throw new HttpException('Không tìm thấy thiết bị', HttpStatus.NOT_FOUND);
+    }
+    return device;
+  }
+
   async updateConnectState(deviceId: string): Promise<void> {
     await this.deviceModel.updateOne({ deviceId }, { state: 'ACTIVE' });
   }

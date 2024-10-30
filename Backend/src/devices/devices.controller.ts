@@ -105,4 +105,9 @@ export class DevicesController {
 
     this.devicesService.handleDisconnectResponse(deviceId, data.disconnected);
   }
+
+  @Post('delete/:deviceId')
+  async deleteDevice(@Param('deviceId') deviceId: string) {
+    return this.devicesService.deleteDevice(deviceId);
+  }
 }
