@@ -34,6 +34,10 @@ int button = 0;
 bool warningState = false;
 bool messageControl = false;
 
+//Define warning value
+float gasWarning = 80;
+float temperatureWarning = 50;
+
 //Fan dc
 #define FAN_PIN 32 
 
@@ -155,7 +159,10 @@ void callback(char* topic, byte* payload, unsigned int length) {
     handleDisconnect(doc);
   } else if (String(topic).startsWith("iot/device/warning/control/" + macAddress)) {
     handleWarning(doc);
+  }else if(String(topic).startsWith("iot/warning/change"+ macAddress)){
+      handleWarningValue(doc);
   }
+
     // Publish LED status back
   client.publish(topic_warning_status, warningState ? "ON" : "OFF");
   }
@@ -268,6 +275,13 @@ void handleWarning(const JsonDocument& doc) {
 
 }
 
+void handleWarningValue(const JsonDocument& doc){
+  string deviceId = doc["data"]["deviceId"];
+  if(deviceId = macAddress){
+    gasWarning = doc["data"]["gasValue"];
+    temperatureWarning = doc["data"]["temValue"];
+  }
+}
 
 void setup() {
   // Debug console
@@ -324,7 +338,7 @@ void GASLevel() {
   delay(5000);
 
   if(!messageControl){
-    if (value >= 80 || t >= 50) {
+    if (value >= gasWarning || t >= temperatureWarning) {
     digitalWrite(buzzer, HIGH);
     digitalWrite(LED, HIGH);
     digitalWrite(FAN_PIN, HIGH);
