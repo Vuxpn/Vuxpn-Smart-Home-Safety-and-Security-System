@@ -8,6 +8,7 @@ import { ClientProxy } from '@nestjs/microservices';
 import { MQTT_TOPICS } from 'src/mqtt/mqtt.constants';
 import { WarningControlDto } from './dto/warningControl.dto';
 import { DevicesService } from 'src/devices/devices.service';
+import { WarningValueDto } from './dto/warningValue.dto';
 
 @Injectable()
 export class GasWarningService {
@@ -37,35 +38,26 @@ export class GasWarningService {
     }
   }
 
-  //Gửi yêu cầu xác minh device
-  async verifyDevice(deviceId: string): Promise<void> {
-    try {
-      const data = { deviceId };
-      this.client.emit(MQTT_TOPICS.CONNECTDEVICE, { data });
-      return;
-    } catch (error) {
-      throw new InternalServerErrorException('Failed to connect device');
-    }
-  }
-
   //Điều khiển cảnh báo
-  async warningControl(data: WarningControlDto): Promise<void> {
+  async warningControl(data: WarningControlDto) {
     try {
-      await this.client
-        .emit(MQTT_TOPICS.WARNING_CONTROL, {
-          deviceId: data.deviceId,
-          state: data.state,
-        })
-        .toPromise();
+      const topic = `${MQTT_TOPICS.WARNING_CONTROL}/${data.deviceId}`;
+      const message = { ...data };
+      console.log(topic, message);
+      return this.client.emit(topic, message);
     } catch (error) {
       this.logger.error(
         `Failed to control warning: ${error.message}`,
         error.stack,
       );
-      throw new InternalServerErrorException(
-        'Failed to send warning control command',
-      );
     }
+  }
+
+  //Điều khiển mức độ cảnh báo
+  changeWarningLevel(data: WarningValueDto) {
+    const topic = `${MQTT_TOPICS.WARNING_CHANGE_VALUE}/${data.deviceId}`;
+    const message = { ...data };
+    return this.client.emit(topic, message);
   }
 
   //Nhận dữ liệu nhiệt độ

@@ -21,6 +21,8 @@ import { MQTT_TOPICS } from 'src/mqtt/mqtt.constants';
 import { WarningControlDto } from 'src/gaswarning/dto/warningControl.dto';
 import { DeviceGuard } from 'src/devices/device.guard';
 import { DevicesService } from 'src/devices/devices.service';
+import { warn } from 'console';
+import { WarningValueDto } from './dto/warningValue.dto';
 
 @Controller('home')
 export class GasWarningController {
@@ -30,23 +32,24 @@ export class GasWarningController {
     private readonly deviceService: DevicesService,
   ) {}
 
-  //kết nối device
-  @Post(':deviceId/connect')
-  @UseGuards(DeviceGuard)
-  getDevice(@Param('deviceId') deviceId: string, @Req() request) {
-    this.gasWarningService.verifyDevice(deviceId);
-  }
-
   //Điều khiển cảnh báo
-  @Post(':deviceId/warning/:state')
+  @Post(':deviceId/warning')
   @UseGuards(DeviceGuard)
   controlWarning(
-    @Param('deviceId') deviceId: string,
-    @Param('state') state: string,
+    @Body() warningControlDto: WarningControlDto,
     @Req() request, //lấy device từ guard
   ) {
-    const data = { deviceId, state };
-    this.gasWarningService.warningControl(data);
+    this.gasWarningService.warningControl(warningControlDto);
+  }
+
+  //Điều khiển mức độ cảnh báo
+  @Post(':deviceId/warningLevel')
+  @UseGuards(DeviceGuard)
+  controlWarningLevel(
+    @Body() warningValueDto: WarningValueDto,
+    @Req() request, //lấy device từ guard
+  ) {
+    this.gasWarningService.changeWarningLevel(warningValueDto);
   }
 
   //Nhận dữ liệu nhiệt độ
