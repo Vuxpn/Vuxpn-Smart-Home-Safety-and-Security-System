@@ -19,6 +19,7 @@ export class HomesService {
       .find({ $or: [{ owner: userId }, { members: userId }] })
       .populate('owner', 'name email')
       .populate('members', 'name email')
+      .populate('devices', 'name description')
       .exec();
     return homes;
   }
@@ -31,6 +32,7 @@ export class HomesService {
       })
       .populate('owner', 'name email')
       .populate('members', 'name email')
+      .populate('devices', 'name description')
       .exec();
     if (!home) {
       throw new HttpException('Home not found', HttpStatus.NOT_FOUND);
@@ -88,7 +90,8 @@ export class HomesService {
         runValidators: true,
       })
       .populate('owner', 'name email')
-      .populate('members', 'name email');
+      .populate('members', 'name email')
+      .populate('devices', 'name description');
 
     if (!updatedHome) {
       throw new HttpException('Home not found', HttpStatus.NOT_FOUND);

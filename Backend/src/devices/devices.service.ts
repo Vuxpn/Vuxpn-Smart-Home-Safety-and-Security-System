@@ -13,6 +13,7 @@ import { Model } from 'mongoose';
 import { ClientProxy } from '@nestjs/microservices';
 import { MQTT_TOPICS } from 'src/mqtt/mqtt.constants';
 import { connected } from 'process';
+import { Home } from 'src/schema/home.schema';
 
 @Injectable()
 export class DevicesService {
@@ -40,7 +41,8 @@ export class DevicesService {
   readonly clientId = 'vuphan';
   constructor(
     @Inject('MQTT_CLIENT') private readonly client: ClientProxy,
-    @InjectModel(Device.name, 'device') private deviceModel: Model<Device>,
+    @InjectModel(Device.name) private deviceModel: Model<Device>,
+    @InjectModel(Home.name) private homeModel: Model<Home>,
   ) {}
 
   async getAllDevices() {
@@ -58,7 +60,17 @@ export class DevicesService {
 
   async createDevice(device: CreateDeviceDto) {
     const newDevice = { ...device };
-    await this.deviceModel.create(newDevice);
+    const createDevice = await this.deviceModel.create(newDevice);
+    //thêm device vào home
+    if (device.homeId) {
+      await this.homeModel.findByIdAndUpdate(
+        device.homeId,
+        {
+          $push: { devices: createDevice._id },
+        },
+        { new: true },
+      );
+    }
     return newDevice;
   }
 
@@ -66,6 +78,12 @@ export class DevicesService {
     const device = await this.deviceModel.findOneAndDelete({ deviceId });
     if (!device) {
       throw new HttpException('Không tìm thấy thiết bị', HttpStatus.NOT_FOUND);
+    }
+    // Xóa device khỏi home
+    if (device.homeId) {
+      await this.homeModel.findByIdAndUpdate(device.homeId, {
+        $pull: { devices: device._id },
+      });
     }
     return device;
   }
@@ -209,5 +227,10 @@ export class DevicesService {
     if (timeout) clearTimeout(timeout);
     this.verificationTimeouts.delete(deviceId);
     this.verificationCallbacks.delete(deviceId);
+  }
+
+  async getDevicesByHomeId(homeId: string): Promise<Device[]> {
+    const devices = await this.deviceModel.find({ homeId }).exec();
+    return devices;
   }
 }

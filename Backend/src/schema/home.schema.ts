@@ -13,7 +13,10 @@ export class Home {
   @Prop()
   description: string;
 
-  @Prop({ type: [String], default: [] })
+  @Prop({
+    type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Device' }],
+    default: [],
+  })
   devices: string[];
 
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true })

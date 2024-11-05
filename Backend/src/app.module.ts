@@ -16,9 +16,6 @@ import { HomesModule } from './home/homes.module';
     }),
 
     MongooseModule.forRoot('mongodb://localhost:27017/iot'),
-    MongooseModule.forRoot('mongodb://localhost:27017/smarthome', {
-      connectionName: 'device',
-    }),
     HomesModule,
     UsersModule,
     AuthModule,

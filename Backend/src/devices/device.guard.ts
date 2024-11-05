@@ -11,9 +11,7 @@ import { Observable } from 'rxjs';
 
 @Injectable()
 export class DeviceGuard implements CanActivate {
-  constructor(
-    @InjectModel(Device.name, 'device') private deviceModel: Model<Device>,
-  ) {}
+  constructor(@InjectModel(Device.name) private deviceModel: Model<Device>) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();

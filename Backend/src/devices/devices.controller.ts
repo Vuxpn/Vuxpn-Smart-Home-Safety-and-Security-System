@@ -110,4 +110,22 @@ export class DevicesController {
   async deleteDevice(@Param('deviceId') deviceId: string) {
     return this.devicesService.deleteDevice(deviceId);
   }
+
+  @Get('home/:homeId')
+  async getDevicesByHomeId(@Param('homeId') homeId: string) {
+    try {
+      const devices = await this.devicesService.getDevicesByHomeId(homeId);
+      return {
+        success: true,
+        data: devices,
+        message: 'Lấy danh sách thiết bị thành công',
+      };
+    } catch (error) {
+      throw new InternalServerErrorException({
+        success: false,
+        message: 'Không thể lấy danh sách thiết bị',
+        error: error.message,
+      });
+    }
+  }
 }
