@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { PostsModule } from './posts/posts.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import * as Joi from '@hapi/joi';
 import { MongooseModule } from '@nestjs/mongoose';
@@ -15,24 +14,16 @@ import { HomesModule } from './home/homes.module';
       isGlobal: true,
       envFilePath: '.env',
     }),
-    MongooseModule.forRoot(`mongodb://localhost:27017/post`, {
-      connectionName: 'post',
-    }),
-    MongooseModule.forRoot(`mongodb://localhost:27017/user`, {
-      connectionName: 'user',
-    }),
-    MongooseModule.forRoot(`mongodb://localhost:27017/device`, {
+
+    MongooseModule.forRoot('mongodb://localhost:27017/iot'),
+    MongooseModule.forRoot('mongodb://localhost:27017/smarthome', {
       connectionName: 'device',
     }),
-    MongooseModule.forRoot(`mongodb://localhost:27017/home`, {
-      connectionName: 'home',
-    }),
-    PostsModule,
+    HomesModule,
     UsersModule,
     AuthModule,
     MqttModule,
     DevicesModule,
-    HomesModule,
   ],
   controllers: [],
   providers: [],

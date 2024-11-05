@@ -20,10 +20,7 @@ import { MqttModule } from 'src/mqtt/mqtt.module';
     DevicesService,
     DevicesModule,
     DeviceGuard,
-    MongooseModule.forFeature(
-      [{ name: Device.name, schema: DeviceSchema }],
-      'device',
-    ),
+    MongooseModule.forFeature([{ name: Device.name, schema: DeviceSchema }]),
   ],
 })
 export class DevicesModule {}

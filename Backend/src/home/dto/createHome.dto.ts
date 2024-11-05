@@ -1,18 +1,19 @@
-import { IsString, IsOptional, IsNotEmpty } from 'class-validator';
+import { IsNotEmpty, IsString, IsOptional } from 'class-validator';
 
 export class CreateHomeDto {
-  @IsString()
   @IsNotEmpty()
+  @IsString()
   name: string;
 
+  @IsOptional()
   @IsString()
   address?: string;
 
-  @IsString()
   @IsOptional()
+  @IsString()
   description?: string;
 
-  @IsString()
   @IsOptional()
+  @IsString()
   devices?: string;
 }

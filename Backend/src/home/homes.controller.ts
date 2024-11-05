@@ -7,6 +7,7 @@ import {
   Body,
   Param,
   UseGuards,
+  Request,
 } from '@nestjs/common';
 import { HomesService } from './homes.service';
 import { CreateHomeDto } from './dto/createHome.dto';
@@ -18,30 +19,49 @@ export class HomesController {
   constructor(private readonly homesService: HomesService) {}
 
   @Get()
-  async getAllHomes() {
-    return await this.homesService.getAllHomes();
+  async getAllHomes(@Request() req) {
+    return await this.homesService.getAllHomes(req.user.sub);
   }
 
   @Get(':id')
-  async getHomeById(@Param('id') id: string) {
-    return await this.homesService.getHomeById(id);
+  async getHomeById(@Param('id') id: string, @Request() req) {
+    return await this.homesService.getHomeById(id, req.user.sub);
   }
 
   @Post('create')
-  async createHome(@Body() createHomeDto: CreateHomeDto) {
-    return await this.homesService.createHome(createHomeDto);
+  async createHome(@Body() createHomeDto: CreateHomeDto, @Request() req) {
+    return await this.homesService.createHome(createHomeDto, req.user.sub);
   }
 
-  @Put(':id')
+  @Put('update/:id')
   async updateHome(
     @Param('id') id: string,
     @Body() updateHomeDto: CreateHomeDto,
+    @Request() req,
   ) {
-    return await this.homesService.updateHome(id, updateHomeDto);
+    return await this.homesService.updateHome(id, updateHomeDto, req.user.sub);
   }
 
-  @Delete(':id')
-  async deleteHome(@Param('id') id: string) {
-    return await this.homesService.deleteHome(id);
+  @Delete('delete/:id')
+  async deleteHome(@Param('id') id: string, @Request() req) {
+    return await this.homesService.deleteHome(id, req.user.sub);
+  }
+
+  @Delete(':id/members/:memberId')
+  async removeMember(
+    @Param('id') homeId: string,
+    @Param('memberId') memberId: string,
+    @Request() req,
+  ) {
+    return await this.homesService.removeMember(homeId, memberId, req.user.sub);
+  }
+
+  @Post(':id/members/:memberId')
+  async addMember(
+    @Param('id') homeId: string,
+    @Param('memberId') memberId: string,
+    @Request() req,
+  ) {
+    return await this.homesService.addMember(homeId, memberId, req.user.sub);
   }
 }
