@@ -24,6 +24,6 @@ async function bootstrap() {
   } catch (error) {
     console.error('Error starting microservice:', error);
   }
-  await app.listen(3000);
+  await app.listen(3001);
 }
 bootstrap();

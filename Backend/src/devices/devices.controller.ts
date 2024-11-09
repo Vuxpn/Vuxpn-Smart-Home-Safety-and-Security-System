@@ -20,6 +20,7 @@ import {
 } from '@nestjs/microservices';
 import { MQTT_TOPICS } from 'src/mqtt/mqtt.constants';
 import { privateDecrypt } from 'crypto';
+import { AuthGuard } from 'src/auth/auth.guard';
 
 // Định nghĩa interface cho payload
 interface DeviceData {
@@ -29,12 +30,13 @@ interface DeviceData {
 }
 
 @Controller('device')
+@UseGuards(AuthGuard)
 export class DevicesController {
   constructor(private readonly devicesService: DevicesService) {}
 
-  @Get()
-  getAllDevices() {
-    return this.devicesService.getAllDevices();
+  @Get(':homeId')
+  getAllDevices(@Param('homeId') homeId: string) {
+    return this.devicesService.getAllDevices(homeId);
   }
 
   @Get(':deviceId')

@@ -45,8 +45,14 @@ export class DevicesService {
     @InjectModel(Home.name) private homeModel: Model<Home>,
   ) {}
 
-  async getAllDevices() {
-    const device = await this.deviceModel.find().exec();
+  async getAllDevices(homeId: string) {
+    const device = await this.deviceModel.findOne({ homeId }).exec();
+    if (!device) {
+      throw new HttpException(
+        'Trong nhà không có thiết bị nào',
+        HttpStatus.NOT_FOUND,
+      );
+    }
     return device;
   }
 
@@ -106,7 +112,10 @@ export class DevicesService {
   async verifyDevice(
     createDeviceDto: CreateDeviceDto,
   ): Promise<{ message: string }> {
-    const { deviceId } = createDeviceDto;
+    const { deviceId, homeId } = createDeviceDto;
+
+    //Kiểm tra xem deviceId có tồn tại trong DB không
+    const existingDevice = await this.deviceModel.findOne({ deviceId });
 
     //Tạo 30s timeout để nhận response
     return new Promise((resolve, reject) => {
@@ -121,9 +130,24 @@ export class DevicesService {
       this.verificationCallbacks.set(deviceId, async (verified: boolean) => {
         if (verified) {
           try {
-            // Nếu verify thành công, tạo device trong DB
-            await this.createDevice(createDeviceDto);
-            resolve({ message: 'Device verified and created successfully' });
+            if (existingDevice) {
+              if (homeId) {
+                await this.homeModel.findByIdAndUpdate(
+                  homeId,
+                  {
+                    $addToSet: { devices: existingDevice._id }, // Sử dụng $addToSet để tránh trùng lặp
+                  },
+                  { new: true },
+                );
+              }
+              resolve({
+                message: 'Device verified and added to home successfully',
+              });
+            } else {
+              // Nếu verify thành công, tạo device trong DB
+              await this.createDevice(createDeviceDto);
+              resolve({ message: 'Device verified and created successfully' });
+            }
           } catch (error) {
             reject(error);
           }

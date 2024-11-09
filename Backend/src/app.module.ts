@@ -16,6 +16,13 @@ import { HomesModule } from './home/homes.module';
     }),
 
     MongooseModule.forRoot('mongodb://localhost:27017/iot'),
+    // MongooseModule.forRootAsync({
+    //   imports: [ConfigModule],
+    //   useFactory: async (configService: ConfigService) => ({
+    //     uri: `mongodb://${configService.get('MONGO_USERNAME')}:${configService.get('MONGO_PASSWORD')}@mongo:27017/${configService.get('MONGO_DATABASE')}?authSource=admin`,
+    //   }),
+    //   inject: [ConfigService],
+    // }),
     HomesModule,
     UsersModule,
     AuthModule,
