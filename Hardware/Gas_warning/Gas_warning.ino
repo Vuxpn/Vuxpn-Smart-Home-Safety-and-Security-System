@@ -222,30 +222,6 @@ void handleDisconnect(const JsonDocument& doc) {
 }
 
 void handleWarning(const JsonDocument& doc) {
-  // DynamicJsonDocument doc(1024);
-  // deserializeJson(doc, incommingMessage); 
-  // const char* connect = doc["data"]["deviceId"];
-  // const char* command = doc["data"]["state"];
-  // Serial.print("Warning Command: ");
-  // Serial.println(command);     
-  // Serial.println(connect);
-  // if(strcmp(connect, macAddress) == 0){
-  //   //Check message control warning       
-  //   if(strcmp(command, "On") == 0 || strcmp(command, "ON") == 0 || strcmp(command, "on") == 0 || strcmp(command, "1") == 0) {         
-  //     warningState = true;         
-  //     messageControl = true;         
-  //     digitalWrite(LED, HIGH);         
-  //     digitalWrite(buzzer, HIGH);         
-  //     Serial.println("Warning turned ON via MQTT");    
-  // }else{
-  //   if(strcmp(command, "Off") == 0 || strcmp(command, "OFF") == 0 || strcmp(command, "off") == 0 || strcmp(command, "0") == 0) {         
-  //     warningState = false;         
-  //     messageControl = false;         
-  //     digitalWrite(LED, LOW);         
-  //     digitalWrite(buzzer, LOW);         
-  //     Serial.println("Warning turned OFF via MQTT");     
-  // }
-  //String deviceMac = getMacAddress();
   String deviceId = doc["data"]["deviceId"];
   String state = doc["data"]["state"];
   
