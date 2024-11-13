@@ -7,6 +7,7 @@ import { AuthModule } from './auth/auth.module';
 import { MqttModule } from './mqtt/mqtt.module';
 import { DevicesModule } from './devices/devices.module';
 import { HomesModule } from './home/homes.module';
+import { DetectionWarningModule } from './detectionwarning/detection.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { HomesModule } from './home/homes.module';
     AuthModule,
     MqttModule,
     DevicesModule,
+    DetectionWarningModule,
   ],
   controllers: [],
   providers: [],
