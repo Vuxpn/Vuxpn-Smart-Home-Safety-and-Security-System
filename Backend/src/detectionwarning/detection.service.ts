@@ -9,8 +9,10 @@ const streamifier = require('streamifier');
 @Injectable()
 export class DetectionWarningService {
   constructor(
-    @InjectModel(Image.name) private readonly imageModel: Model<Image>,
-    @InjectModel(Device.name) private deviceModel: Model<Device>,
+    @InjectModel(Image.name)
+    private readonly imageModel: Model<Image>,
+    @InjectModel(Device.name)
+    private readonly deviceModel: Model<Device>,
   ) {
     cloudinary.config({
       cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -21,7 +23,7 @@ export class DetectionWarningService {
 
   async uploadFile(
     file: Express.Multer.File,
-    deviceId,
+    deviceId: string, // Đây là deviceId string từ ESP32 (ví dụ: 'espcam1')
   ): Promise<CloudinaryResponse> {
     return new Promise<CloudinaryResponse>((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
@@ -30,14 +32,30 @@ export class DetectionWarningService {
         },
         async (error, result) => {
           if (error) return reject(error);
-          // Lưu URL và deviceId vào cơ sở dữ liệu
-          const image = new this.imageModel({
-            url: result.secure_url,
-            createdAt: new Date(),
-            deviceId: deviceId, // Lưu deviceId
-          });
-          await image.save();
-          resolve(result);
+
+          try {
+            // Tìm device dựa trên macId string
+            const device = await this.deviceModel.findOne({
+              deviceId: deviceId,
+            });
+
+            if (!device) {
+              throw new Error(`Device with MacID ${deviceId} not found`);
+            }
+
+            // Tạo và lưu hình ảnh với tham chiếu đến device._id
+            const image = new this.imageModel({
+              url: result.secure_url,
+              createdAt: new Date(),
+              deviceId: device._id, // Lưu ObjectId của device
+            });
+
+            await image.save();
+
+            resolve(result);
+          } catch (err) {
+            reject(err);
+          }
         },
       );
 
@@ -45,7 +63,29 @@ export class DetectionWarningService {
     });
   }
 
-  async getImagesByDeviceId(deviceId: string): Promise<Image[]> {
-    return this.imageModel.find({ deviceId }).exec();
+  // Phương thức để lấy hình ảnh với thông tin device
+  async getImagesWithDevice() {
+    return await this.imageModel
+      .find()
+      .populate('deviceId') // Populate sẽ lấy toàn bộ thông tin của device
+      .exec();
   }
+
+  // Phương thức để lấy hình ảnh theo deviceId string
+  async getImagesByDeviceId(deviceIdentifier: string) {
+    const device = await this.deviceModel.findOne({
+      deviceId: deviceIdentifier,
+    });
+
+    if (!device) {
+      throw new Error(`Device with ID ${deviceIdentifier} not found`);
+    }
+
+    return await this.imageModel
+      .find({ deviceId: device._id })
+      .populate('deviceId')
+      .exec();
+  }
+
+  //Chỉnh
 }

@@ -8,6 +8,8 @@ import { MqttModule } from './mqtt/mqtt.module';
 import { DevicesModule } from './devices/devices.module';
 import { HomesModule } from './home/homes.module';
 import { DetectionWarningModule } from './detectionwarning/detection.module';
+import { CacheModule, CacheStore } from '@nestjs/cache-manager';
+import { redisStore } from 'cache-manager-redis-store';
 
 @Module({
   imports: [

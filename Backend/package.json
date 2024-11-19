@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@hapi/joi": "^17.1.1",
+    "@nestjs/cache-manager": "^2.1.0",
     "@nestjs/common": "^10.0.0",
     "@nestjs/config": "^3.2.3",
     "@nestjs/core": "^10.0.0",
@@ -32,11 +33,15 @@
     "@types/bcrypt": "^5.0.2",
     "@types/hapi__joi": "^17.1.14",
     "bcrypt": "^5.1.1",
+    "cache-manager": "^4.1.0",
+    "cache-manager-redis-store": "^3.0.1",
+    "cache-manager-redis-yet": "^5.1.5",
     "class-validator": "^0.14.1",
     "cloudinary": "^2.5.1",
     "mongo-post": "file:",
     "mongoose": "^8.7.1",
     "mqtt": "^5.10.1",
+    "redis": "^4.7.0",
     "reflect-metadata": "^0.2.0",
     "rxjs": "^7.8.1",
     "streamifier": "^0.1.1"

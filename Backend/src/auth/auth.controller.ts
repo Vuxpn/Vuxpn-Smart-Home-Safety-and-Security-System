@@ -1,5 +1,6 @@
 import {
   Body,
+  Headers,
   Controller,
   Get,
   Patch,
@@ -25,6 +26,16 @@ export class AuthController {
   @Post('login')
   async login(@Body() loginData: LogInDto) {
     return await this.authService.signIn(loginData.email, loginData.password);
+  }
+
+  @Post('logout')
+  @UseGuards(AuthGuard)
+  async logout(
+    @Headers('authorization') auth: string,
+    @Body() body: { refresh_token: string },
+  ) {
+    const access_token = auth.split(' ')[1];
+    return this.authService.logout(access_token, body.refresh_token);
   }
 
   @UseGuards(AuthGuard)

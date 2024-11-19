@@ -1,16 +1,17 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import * as mongoose from 'mongoose';
+import { Document, Types } from 'mongoose';
+import { Device } from './device.schema';
 
-@Schema()
-export class Image {
+@Schema({ timestamps: true })
+export class Image extends Document {
   @Prop({ required: true })
   url: string;
 
   @Prop({ default: Date.now })
-  creatAt: Date;
+  createdAt: Date;
 
-  @Prop({ type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Device' }] })
-  deviceId: string;
+  @Prop({ type: Types.ObjectId, ref: 'Device', required: true })
+  deviceId: Types.ObjectId;
 }
 
-export const imageSchema = SchemaFactory.createForClass(Image);
+export const ImageSchema = SchemaFactory.createForClass(Image);
