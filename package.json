@@ -1,6 +1,0 @@
-{
-  "dependencies": {
-    "@nestjs/cache-manager": "^2.3.0",
-    "cache-manager": "^5.7.6"
-  }
-}
