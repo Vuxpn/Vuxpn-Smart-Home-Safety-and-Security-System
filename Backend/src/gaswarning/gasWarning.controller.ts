@@ -79,7 +79,7 @@ export class GasWarningController {
     return this.gasWarningService.getGasLevel(data);
   }
 
-  @MessagePattern(MQTT_TOPICS.WARNING_CONTROL)
+  @MessagePattern(MQTT_TOPICS.GASWARNING_CONTROL)
   getNotificationsWarning(
     @Payload() data: number[],
     @Ctx() context: MqttContext,

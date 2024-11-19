@@ -1,14 +1,18 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
+import { ClientProxy } from '@nestjs/microservices';
 import { v2 as cloudinary } from 'cloudinary';
 import { CloudinaryResponse } from './cloudinary-response';
 import { InjectModel } from '@nestjs/mongoose';
 import { Image } from 'src/schema/image.schema';
 import { Model } from 'mongoose';
 import { Device } from 'src/schema/device.schema';
+import { MQTT_TOPICS } from 'src/mqtt/mqtt.constants';
+import { ChangeTimeDto } from './dto/detectionTime.dto';
 const streamifier = require('streamifier');
 @Injectable()
 export class DetectionWarningService {
   constructor(
+    @Inject('MQTT_CLIENT') private readonly client: ClientProxy,
     @InjectModel(Image.name)
     private readonly imageModel: Model<Image>,
     @InjectModel(Device.name)
@@ -87,5 +91,14 @@ export class DetectionWarningService {
       .exec();
   }
 
-  //Chỉnh
+  //Chỉnh thời gian sáng đèn
+  async changeTime(data: ChangeTimeDto) {
+    try {
+      const topic = `${MQTT_TOPICS.DETECTION_CHANGE_TIME}/${data.deviceId}`;
+      const message = { ...data };
+      return this.client.emit(topic, message);
+    } catch (error) {
+      throw new Error(error);
+    }
+  }
 }

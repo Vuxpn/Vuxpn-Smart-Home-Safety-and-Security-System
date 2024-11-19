@@ -18,9 +18,13 @@ export const MQTT_TOPICS = {
   GASLEVEL: `iot/device/gaslevel`,
 
   // Warning control (Server -> ESP32)
-  WARNING_CONTROL: 'iot/device/warning/control',
+  GASWARNING_CONTROL: 'iot/device/warning/control',
 
   // Warning status (ESP32 -> Server)
-  WARNING_STATUS: 'iot/warning/status',
-  WARNING_CHANGE_VALUE: 'iot/warning/change',
+  GASWARNING_STATUS: 'iot/warning/status',
+  GASWARNING_CHANGE_VALUE: 'iot/warning/change',
+
+  //detection device
+  DETECTION_CHANGE_TIME: 'iot/device/detection/timeout',
+  DETECTION_CHANGE_MODE: 'iot/device/detection/mode',
 };

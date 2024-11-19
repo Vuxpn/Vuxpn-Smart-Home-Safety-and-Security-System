@@ -41,7 +41,7 @@ export class GasWarningService {
   //Điều khiển cảnh báo
   async warningControl(data: WarningControlDto) {
     try {
-      const topic = `${MQTT_TOPICS.WARNING_CONTROL}/${data.deviceId}`;
+      const topic = `${MQTT_TOPICS.GASWARNING_CONTROL}/${data.deviceId}`;
       const message = { ...data };
       console.log(topic, message);
       return this.client.emit(topic, message);
@@ -55,7 +55,7 @@ export class GasWarningService {
 
   //Điều khiển mức độ cảnh báo
   changeWarningLevel(data: WarningValueDto) {
-    const topic = `${MQTT_TOPICS.WARNING_CHANGE_VALUE}/${data.deviceId}`;
+    const topic = `${MQTT_TOPICS.GASWARNING_CHANGE_VALUE}/${data.deviceId}`;
     const message = { ...data };
     return this.client.emit(topic, message);
   }
