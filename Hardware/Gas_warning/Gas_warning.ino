@@ -252,7 +252,7 @@ void handleWarning(const JsonDocument& doc) {
 }
 
 void handleWarningValue(const JsonDocument& doc){
-  string deviceId = doc["data"]["deviceId"];
+  String deviceId = doc["data"]["deviceId"];
   if(deviceId = macAddress){
     gasWarning = doc["data"]["gasValue"];
     temperatureWarning = doc["data"]["temValue"];
