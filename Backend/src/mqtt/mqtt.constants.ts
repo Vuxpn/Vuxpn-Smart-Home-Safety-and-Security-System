@@ -27,4 +27,5 @@ export const MQTT_TOPICS = {
   //detection device
   DETECTION_CHANGE_TIME: 'iot/device/detection/timeout',
   DETECTION_CHANGE_MODE: 'iot/device/detection/mode',
+  DETECTION_STATUS: 'iot/device/+/detection/status',
 };

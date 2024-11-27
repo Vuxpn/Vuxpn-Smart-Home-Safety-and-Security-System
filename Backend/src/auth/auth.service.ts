@@ -61,25 +61,9 @@ export class AuthService {
         );
       }
       await this.verifyPassword(plainTextPassword, user.password);
-      const payload = {
-        email: user.email,
-        sub: user._id,
-        type: 'access', // Add token type for differentiation
-      };
-      const refreshPayload = {
-        ...payload,
-        type: 'refresh',
-      };
-      const access_token = await this.jwtService.signAsync(payload, {
-        expiresIn: '15m',
-      });
-      const refresh_token = await this.jwtService.signAsync(refreshPayload, {
-        expiresIn: '30d',
-      });
-      return {
-        access_token,
-        refresh_token,
-      };
+      // Tạo tokens với generateTokens
+      const tokens = await this.generateTokens(user);
+      return tokens;
     } catch (error) {
       console.error('Error during sign-in:', error);
       throw new HttpException(
@@ -87,6 +71,29 @@ export class AuthService {
         HttpStatus.BAD_REQUEST,
       );
     }
+  }
+
+  private async generateTokens(user: any) {
+    const payload = {
+      email: user.email,
+      sub: user._id,
+    };
+
+    const [access_token, refresh_token] = await Promise.all([
+      this.jwtService.signAsync(
+        { ...payload, type: 'access' },
+        { expiresIn: '15m' },
+      ),
+      this.jwtService.signAsync(
+        { ...payload, type: 'refresh' },
+        { expiresIn: '7d' },
+      ),
+    ]);
+
+    return {
+      access_token,
+      refresh_token,
+    };
   }
 
   async logout(access_token: string, refresh_token: string) {
@@ -141,7 +148,10 @@ export class AuthService {
       if (payload.type !== 'refresh') {
         throw new HttpException('Invalid token', HttpStatus.UNAUTHORIZED);
       }
-
+      const user = await this.userService.getUserByEmail(payload.email);
+      if (!user) {
+        throw new UnauthorizedException('User not found');
+      }
       const newPayload = {
         email: payload.email,
         sub: payload.sub,
