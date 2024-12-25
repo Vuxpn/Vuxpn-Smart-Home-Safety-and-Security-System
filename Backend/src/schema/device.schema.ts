@@ -21,6 +21,12 @@ export class Device {
 
   @Prop()
   lastConnected?: Date;
+
+  @Prop({
+    required: true,
+    enum: ['Light', 'Atmosphere Sensor', 'Security Camera', 'Other'],
+  })
+  type: string;
 }
 
 export const DeviceSchema = SchemaFactory.createForClass(Device);

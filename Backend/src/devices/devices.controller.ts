@@ -21,6 +21,7 @@ import {
 import { MQTT_TOPICS } from 'src/mqtt/mqtt.constants';
 import { privateDecrypt } from 'crypto';
 import { AuthGuard } from 'src/auth/auth.guard';
+import { Public } from 'src/auth/decorators/public.decorator';
 
 // Định nghĩa interface cho payload
 interface DeviceData {
@@ -30,7 +31,7 @@ interface DeviceData {
 }
 
 @Controller('device')
-@UseGuards(AuthGuard)
+//@UseGuards(AuthGuard)
 export class DevicesController {
   constructor(private readonly devicesService: DevicesService) {}
 
@@ -39,12 +40,13 @@ export class DevicesController {
     return this.devicesService.getAllDevices(homeId);
   }
 
-  @Get(':deviceId')
-  @UseGuards(DeviceGuard)
-  getDeviceById(@Param('deviceId') deviceId: string) {
-    return this.devicesService.getDeviceById(deviceId);
+  @Get('/detail/:id')
+  getDeviceById(@Param('id') id: string) {
+    console.log('Device ID:', id); // Debugging line
+    return this.devicesService.getDeviceById(id);
   }
 
+  @Public()
   @Post('create')
   async createDevice(@Body() createDeviceDto: CreateDeviceDto) {
     //Khởi tạo xác thực device
@@ -107,7 +109,7 @@ export class DevicesController {
 
     this.devicesService.handleDisconnectResponse(deviceId, data.disconnected);
   }
-
+  @Public()
   @Post('delete/:deviceId')
   async deleteDevice(@Param('deviceId') deviceId: string) {
     return this.devicesService.deleteDevice(deviceId);

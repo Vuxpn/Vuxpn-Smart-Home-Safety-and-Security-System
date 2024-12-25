@@ -1,4 +1,3 @@
-
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <string.h>
@@ -40,12 +39,13 @@ float temperatureWarning = 50;
 
 //Fan dc
 #define FAN_PIN 32 
+bool fanControl = false;
 
 //Flag mqtt
 bool mqttControl = false;
 
 // Connect wifi
-const char *ssid = "vuxpn";
+const char *ssid = "Vuxpn";
 const char *password = "12345678";
 
 // MQTT Broker
@@ -62,7 +62,7 @@ const char *topic_connect_device = "iot/device/gas/connect"; //Topic nhận yêu
 
 
 //macAddress
-String macAddress = "1A-2B-3C-4D-5F-6E";
+String macAddress = "thietbi4";
 
 // String getMacAddress() {
   // uint8_t mac[6];
@@ -92,13 +92,19 @@ String macAddress = "1A-2B-3C-4D-5F-6E";
 
 WiFiClientSecure espClient;
 PubSubClient client(espClient);
-bool isConnected = false;
+bool isConnected = true;
 unsigned long lastReadingTime = 0;
 const long readingInterval = 5000; // Read every 5 seconds
 
 unsigned long lastMsg = 0;
 #define MSG_BUFFER_SIZE (50)
 char msg[MSG_BUFFER_SIZE];
+
+// Add new constants for timing
+const unsigned long MQTT_PUBLISH_INTERVAL = 5000;  // 5 seconds
+const unsigned long SENSOR_READ_INTERVAL = 2000;   // 2 seconds
+unsigned long lastMqttPublish = 0;
+unsigned long lastSensorRead = 0;
 
 void setup_wifi() {
   delay(10);
@@ -118,25 +124,29 @@ void setup_wifi() {
 }
 //------------Connect to MQTT Broker-----------------------------
 void reconnect() {
-  while (!client.connected()) {
+  if (!client.connected()) {
     Serial.print("Attempting MQTT connection...");
-    String clientID =  "ESPClient-";
-    clientID += String(random(0xffff),HEX);
+    String clientID = "ESPClient-" + String(random(0xffff), HEX);
+    
     if (client.connect(clientID.c_str(), mqtt_username, mqtt_password)) {
       Serial.println("connected");
-      //String deviceMac = getMacAddress();
-      //Sub topic
-      client.subscribe(("iot/device/create/" + macAddress).c_str());
-      client.subscribe(("iot/device/connect/" + macAddress).c_str());
-      client.subscribe(("iot/device/disconnect/" + macAddress).c_str());
-      client.subscribe(("iot/device/warning/control/"+ macAddress).c_str());
-      // Gửi trạng thái LED hiện tại
+      // Consolidate subscriptions
+      const String topics[] = {
+        "iot/device/create",
+        "iot/device/connect",
+        "iot/device/disconnect",
+        "iot/device/warning/control",
+        "iot/warning/change",
+        "iot/warning/fan"
+      };
+      
+      for (const String& baseTopic : topics) {
+        client.subscribe((baseTopic + macAddress).c_str());
+      }
+      
       client.publish(topic_warning_status, warningState ? "ON" : "OFF");
     } else {
-      Serial.print("failed, rc=");
-      Serial.print(client.state());
-      Serial.println(" try again in 5 seconds");
-      delay(5000);
+      Serial.printf("failed, rc=%d\n", client.state());
     }
   }
 }
@@ -151,16 +161,18 @@ void callback(char* topic, byte* payload, unsigned int length) {
   deserializeJson(doc, incommingMessage);
 
   // 
-  if (String(topic).startsWith("iot/device/create/" + macAddress)) {
+  if (String(topic).startsWith("iot/device/create" + macAddress)) {
     handleVerification(doc);
-  } else if (String(topic).startsWith("iot/device/connect/" + macAddress)) {
+  } else if (String(topic).startsWith("iot/device/connect" + macAddress)) {
     handleConnect(doc);
-  } else if (String(topic).startsWith("iot/device/disconnect/" + macAddress)) {
+  } else if (String(topic).startsWith("iot/device/disconnect" + macAddress)) {
     handleDisconnect(doc);
-  } else if (String(topic).startsWith("iot/device/warning/control/" + macAddress)) {
+  } else if (String(topic).startsWith("iot/device/warning/control" + macAddress)) {
     handleWarning(doc);
-  }else if(String(topic).startsWith("iot/warning/change"+ macAddress)){
-      handleWarningValue(doc);
+  }else if(String(topic).startsWith("iot/warning/change" + macAddress)){
+    handleWarningValue(doc);
+  }else if(String(topic).startsWith("iot/warning/fan" + macAddress)){
+    handleFan(doc);
   }
 
     // Publish LED status back
@@ -253,10 +265,35 @@ void handleWarning(const JsonDocument& doc) {
 
 void handleWarningValue(const JsonDocument& doc){
   String deviceId = doc["data"]["deviceId"];
-  if(deviceId = macAddress){
+  if(deviceId == macAddress && isConnected == true){
     gasWarning = doc["data"]["gasValue"];
     temperatureWarning = doc["data"]["temValue"];
+    Serial.println('gasWarning Value:'+ gasWarning );
+    Serial.println('temperatureWarning Value:'+ temperatureWarning );
   }
+}
+
+void handleFan(const JsonDocument& doc){
+  String deviceId = doc["data"]["deviceId"];
+  String state = doc["data"]["state"];
+    Serial.print("Fan Control Command: ");
+    Serial.println(state);
+    Serial.println(deviceId);
+
+    if (deviceId == macAddress && isConnected == true) {
+        // Check message control warning
+        if (state == "On" || state == "ON" || state == "on" || state == "1") {
+            fanControl = true;
+            digitalWrite(FAN_PIN, HIGH);
+            Serial.println("Fan turned ON via MQTT");
+        }
+        else if (state == "Off" || state == "OFF" || state == "off" || state == "0") {
+            fanControl = false;
+            digitalWrite(FAN_PIN, LOW);
+            Serial.println("Fan turned OFF via MQTT");
+        }
+    }
+    
 }
 
 void setup() {
@@ -298,99 +335,101 @@ void warning() {
 
 
 void GASLevel() {
-  int value = analogRead(sensor);
+  static int lastValue = 0;
+  static float lastTemp = 0;
+  
+  int value = map(analogRead(sensor), 0, 4095, 0, 100);
   float t = dht.readTemperature();
-  value = map(value, 0, 4095, 0, 100); 
-  //Blynk.virtualWrite(V4, value);
-  Serial.println(value);
-  //publish gas level
-  DynamicJsonDocument doc(1024);
-  doc["gaslevel"]= value;
-  char mqtt_message[128];
-  serializeJson(doc,mqtt_message);
-  if(isConnected){
-    publishMessage("iot/device/gaslevel", mqtt_message, true);
+  
+  // Only publish if values changed significantly or publish interval reached
+  if (abs(value - lastValue) >= 2 || abs(t - lastTemp) >= 0.5 || 
+      (millis() - lastMqttPublish) >= MQTT_PUBLISH_INTERVAL) {
+    
+    if (isConnected) {
+      DynamicJsonDocument doc(128);  // Reduced size
+      doc["gaslevel"] = value;
+      String mqtt_message;
+      serializeJson(doc, mqtt_message);
+      publishMessage("iot/device/gaslevel/thietbi4", mqtt_message, true);
+    }
+    
+    lastValue = value;
+    lastTemp = t;
+    lastMqttPublish = millis();
   }
-  delay(5000);
 
-  if(!messageControl){
-    if (value >= gasWarning || t >= temperatureWarning) {
+  // Warning control logic
+  if (!messageControl && (value >= gasWarning || t >= temperatureWarning)) {
     digitalWrite(buzzer, HIGH);
     digitalWrite(LED, HIGH);
     digitalWrite(FAN_PIN, HIGH);
-  } else {
-    if (canhbao == 0 ) {
-      digitalWrite(buzzer, LOW);
-      digitalWrite(LED, LOW);
+  } else if (!messageControl && canhbao == 0) {
+    digitalWrite(buzzer, LOW);
+    digitalWrite(LED, LOW);
+    if (!fanControl) {
       digitalWrite(FAN_PIN, LOW);
     }
   }
-  }
-  
 }
 
 void loop() {
+  client.loop();  // Handle MQTT messages first
+  
+  unsigned long currentMillis = millis();
+  
+  // Check MQTT connection
   if (!client.connected()) {
     reconnect();
+    return;  // Start fresh after reconnection
   }
-  GASLevel();
-  // Blynk.run();
-  client.loop();
-  // Read Temp
-  float t = dht.readTemperature();
-  // Read Humi
-  float h = dht.readHumidity();
-  // Check isRead ?
-  if (isnan(h) || isnan(t)) {
-    delay(500);
-    Serial.println("Failed to read from DHT sensor!\n");
-    return;
-  }
-  if(isConnected){
-      //gửi độ ẩm
-    DynamicJsonDocument hdoc(1024);
-    hdoc["humidity"]=h;
-    char hum_message[128];
-    serializeJson(hdoc,hum_message);
-    publishMessage("iot/device/humidity", hum_message, true);
-
-    ///gửi nhiệt độ
-    DynamicJsonDocument tdoc(1024);
-    tdoc["temperature"]=t;
-    char tem_message[128];
-    serializeJson(tdoc,tem_message);
-    publishMessage("iot/device/temperature", tem_message, true);
   
-  }
-  Serial.print("\n");
-  Serial.print("Humidity: " + String(h) + "%");
-  Serial.print("\t");
-  Serial.print("Temperature:" + String(t) + " C");
-  Serial.print("\t");
-  delay(5000);
-  // Button điều khiển cửa
-  if (digitalRead(button1) == LOW) {
-    if (button1State == HIGH) {
-      button1State = LOW; // Cập nhật trạng thái button1
-      delay(100);
+  // Read sensors at regular intervals
+  if (currentMillis - lastSensorRead >= SENSOR_READ_INTERVAL) {
+    float t = dht.readTemperature();
+    float h = dht.readHumidity();
+    
+    if (!isnan(h) && !isnan(t) && isConnected) {
+      // Publish temperature and humidity
+      StaticJsonDocument<64> doc;  // Smaller document size
+      String message;
+      
+      doc["humidity"] = h;
+      serializeJson(doc, message);
+      publishMessage("iot/device/humidity/thietbi4", message, true);
+      
+      doc.clear();
+      doc["temperature"] = t;
+      serializeJson(doc, message);
+      publishMessage("iot/device/temperature/thietbi4", message, true);
+      
+      Serial.printf("Humidity: %.1f%% Temperature: %.1fC\n", h, t);
     }
-  } else {
+    
+    GASLevel();
+    lastSensorRead = currentMillis;
+  }
+  
+  // Handle buttons without delay
+  handleButtons();
+}
+
+// New function to handle buttons
+void handleButtons() {
+  // Button 1
+  bool currentButton1State = digitalRead(button1);
+  if (currentButton1State == LOW && button1State == HIGH) {
+    button1State = LOW;
+  } else if (currentButton1State == HIGH) {
     button1State = HIGH;
   }
-
-  // Button điều khiển cảnh báo
-    if (digitalRead(button2) == LOW) {
-      if (button2State == HIGH) {
-        canhbao = !canhbao; // Đảo trạng thái cảnh báo
-        warning();
-        button2State = LOW; // Cập nhật trạng thái button2
-        delay(100);
-      }
-    } else {
-      button2State = HIGH;
-    }
-
-  delay(200);
-
-
+  
+  // Button 2
+  bool currentButton2State = digitalRead(button2);
+  if (currentButton2State == LOW && button2State == HIGH) {
+    canhbao = !canhbao;
+    warning();
+    button2State = LOW;
+  } else if (currentButton2State == HIGH) {
+    button2State = HIGH;
+  }
 }

@@ -47,46 +47,51 @@ export class AuthService {
     }
   }
 
-  async signIn(
-    email: string,
-    plainTextPassword: string,
-  ): Promise<{ access_token: string; refresh_token: string }> {
+  async login(email: string, password: string) {
     try {
       const user = await this.userService.getUserByEmail(email);
-      console.log(user);
-      if (!user || !user.password) {
-        throw new HttpException(
-          'User not found or password is missing',
-          HttpStatus.BAD_REQUEST,
-        );
+      if (!user) {
+        throw new HttpException('User not found', HttpStatus.NOT_FOUND);
       }
-      await this.verifyPassword(plainTextPassword, user.password);
-      const payload = {
-        email: user.email,
-        sub: user._id,
-        type: 'access', // Add token type for differentiation
-      };
-      const refreshPayload = {
-        ...payload,
-        type: 'refresh',
-      };
-      const access_token = await this.jwtService.signAsync(payload, {
-        expiresIn: '15m',
-      });
-      const refresh_token = await this.jwtService.signAsync(refreshPayload, {
-        expiresIn: '30d',
-      });
+
+      await this.verifyPassword(password, user.password);
+      const tokens = await this.generateTokens(user);
+
       return {
-        access_token,
-        refresh_token,
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token,
+        user: {
+          id: user._id,
+          email: user.email,
+          name: user.name,
+        },
       };
     } catch (error) {
-      console.error('Error during sign-in:', error);
-      throw new HttpException(
-        'Wrong credentials provided',
-        HttpStatus.BAD_REQUEST,
-      );
+      throw error;
     }
+  }
+
+  private async generateTokens(user: any) {
+    const payload = {
+      email: user.email,
+      sub: user._id,
+    };
+
+    const [access_token, refresh_token] = await Promise.all([
+      this.jwtService.signAsync(
+        { ...payload, type: 'access' },
+        { expiresIn: '15m' },
+      ),
+      this.jwtService.signAsync(
+        { ...payload, type: 'refresh' },
+        { expiresIn: '7d' },
+      ),
+    ]);
+
+    return {
+      access_token,
+      refresh_token,
+    };
   }
 
   async logout(access_token: string, refresh_token: string) {
@@ -141,7 +146,10 @@ export class AuthService {
       if (payload.type !== 'refresh') {
         throw new HttpException('Invalid token', HttpStatus.UNAUTHORIZED);
       }
-
+      const user = await this.userService.getUserByEmail(payload.email);
+      if (!user) {
+        throw new UnauthorizedException('User not found');
+      }
       const newPayload = {
         email: payload.email,
         sub: payload.sub,
@@ -218,6 +226,22 @@ export class AuthService {
         'Wrong credentials provided',
         HttpStatus.BAD_REQUEST,
       );
+    }
+  }
+
+  async getProfile(userId: string) {
+    try {
+      const user = await this.userService.getUserById(userId);
+      if (!user) {
+        throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+      }
+      return {
+        id: user._id,
+        email: user.email,
+        name: user.name,
+      };
+    } catch (error) {
+      throw error;
     }
   }
 }

@@ -8,10 +8,13 @@ import {
   Param,
   UseGuards,
   Request,
+  HttpException,
+  HttpStatus,
 } from '@nestjs/common';
 import { HomesService } from './homes.service';
 import { CreateHomeDto } from './dto/createHome.dto';
 import { AuthGuard } from '../auth/auth.guard';
+import { AddMemberDto } from './dto/add-member.dto';
 
 @Controller('home')
 @UseGuards(AuthGuard)
@@ -56,12 +59,16 @@ export class HomesController {
     return await this.homesService.removeMember(homeId, memberId, req.user.sub);
   }
 
-  @Post(':id/members/:memberId')
+  @Post(':id/members')
   async addMember(
     @Param('id') homeId: string,
-    @Param('memberId') memberId: string,
+    @Body() addMemberDto: AddMemberDto,
     @Request() req,
   ) {
-    return await this.homesService.addMember(homeId, memberId, req.user.sub);
+    return await this.homesService.addMemberByEmail(
+      homeId,
+      addMemberDto.email,
+      req.user.sub,
+    );
   }
 }

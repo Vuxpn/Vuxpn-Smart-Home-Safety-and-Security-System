@@ -7,7 +7,7 @@ import { Image } from 'src/schema/image.schema';
 import { Model } from 'mongoose';
 import { Device } from 'src/schema/device.schema';
 import { MQTT_TOPICS } from 'src/mqtt/mqtt.constants';
-import { ChangeTimeDto } from './dto/detectionTime.dto';
+import { ChangeModeDto, ChangeTimeDto } from './dto/detection.dto';
 const streamifier = require('streamifier');
 @Injectable()
 export class DetectionWarningService {
@@ -93,6 +93,17 @@ export class DetectionWarningService {
 
   //Chỉnh thời gian sáng đèn
   async changeTime(data: ChangeTimeDto) {
+    try {
+      const topic = `${MQTT_TOPICS.DETECTION_CHANGE_TIME}/${data.deviceId}`;
+      const message = { ...data };
+      return this.client.emit(topic, message);
+    } catch (error) {
+      throw new Error(error);
+    }
+  }
+
+  //Chỉnh chế độ
+  async changeMode(data: ChangeModeDto) {
     try {
       const topic = `${MQTT_TOPICS.DETECTION_CHANGE_TIME}/${data.deviceId}`;
       const message = { ...data };

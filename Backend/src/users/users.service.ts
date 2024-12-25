@@ -13,11 +13,11 @@ export class UsersService {
   ) {}
 
   async getUserByEmail(email: string) {
-    const user = await this.userModel.findOne({ email }).exec(); // Chờ cho Promise hoàn thành
-    console.log(user);
-    if (user) {
-      return user; // Trả về user nếu tìm thấy
-    } // Ném lỗi nếu không tìm thấy
+    const user = await this.userModel.findOne({ email }).exec();
+    if (!user) {
+      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    }
+    return user;
   }
 
   async getUserById(userId: string) {

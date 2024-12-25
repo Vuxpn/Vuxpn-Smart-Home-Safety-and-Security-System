@@ -10,6 +10,12 @@ import { HomesModule } from './home/homes.module';
 import { DetectionWarningModule } from './detectionwarning/detection.module';
 import { CacheModule, CacheStore } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-store';
+import { NotificationModule } from './notification/notification.module';
+import { TcpModule } from './tcp/tcp.module';
+import { GasWarningService } from './gaswarning/gasWarning.service';
+import { GasWarningController } from './gaswarning/gasWarning.controller';
+import { GasWarningModule } from './gaswarning/gasWarning.module';
+//import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -32,6 +38,9 @@ import { redisStore } from 'cache-manager-redis-store';
     MqttModule,
     DevicesModule,
     DetectionWarningModule,
+    NotificationModule,
+    TcpModule,
+    //DashboardModule,
   ],
   controllers: [],
   providers: [],

@@ -1,27 +1,17 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Param,
-  UseGuards,
-  Req,
-} from '@nestjs/common';
+import { Controller, Post, Body, Param, UseGuards, Req } from '@nestjs/common';
 import {
   ClientProxy,
   Ctx,
-  EventPattern,
   MessagePattern,
   MqttContext,
   Payload,
 } from '@nestjs/microservices';
 import { Inject } from '@nestjs/common';
-import { GasWarningService } from 'src/gaswarning/gasWarning.service';
-import { MQTT_TOPICS } from 'src/mqtt/mqtt.constants';
-import { WarningControlDto } from 'src/gaswarning/dto/warningControl.dto';
-import { DeviceGuard } from 'src/devices/device.guard';
-import { DevicesService } from 'src/devices/devices.service';
-import { warn } from 'console';
+import { GasWarningService } from './gasWarning.service';
+import { MQTT_TOPICS } from '../mqtt/mqtt.constants';
+import { WarningControlDto } from './dto/warningControl.dto';
+import { DeviceGuard } from '../devices/device.guard';
+import { DevicesService } from '../devices/devices.service';
 import { WarningValueDto } from './dto/warningValue.dto';
 
 @Controller('device')
@@ -32,58 +22,92 @@ export class GasWarningController {
     private readonly deviceService: DevicesService,
   ) {}
 
-  //Điều khiển cảnh báo
-  @Post(':deviceId/warning')
-  @UseGuards(DeviceGuard)
-  controlWarning(
-    @Body() warningControlDto: WarningControlDto,
-    @Req() request, //lấy device từ guard
-  ) {
-    this.gasWarningService.warningControl(warningControlDto);
+  @Post(':deviceId/onwarning')
+  async turnOnWarning(@Param('deviceId') deviceId: string) {
+    try {
+      const result = await this.gasWarningService.warningControl({
+        deviceId,
+        state: 'On',
+      });
+      console.log('Turn on warning result:', result);
+      return result;
+    } catch (error) {
+      console.error('Error turning on warning:', error);
+      throw error;
+    }
   }
 
-  //Điều khiển mức độ cảnh báo
+  @Post(':deviceId/offwarning')
+  async turnOffWarning(@Param('deviceId') deviceId: string) {
+    try {
+      const result = await this.gasWarningService.warningControl({
+        deviceId,
+        state: 'Off',
+      });
+      console.log('Turn off warning result:', result);
+      return result;
+    } catch (error) {
+      console.error('Error turning off warning:', error);
+      throw error;
+    }
+  }
+
   @Post(':deviceId/warningLevel')
-  @UseGuards(DeviceGuard)
   controlWarningLevel(
     @Body() warningValueDto: WarningValueDto,
-    @Req() request, //lấy device từ guard
+    @Param('deviceId') deviceId: string,
   ) {
-    this.gasWarningService.changeWarningLevel(warningValueDto);
+    return this.gasWarningService.changeWarningLevel({
+      ...warningValueDto,
+      deviceId,
+    });
   }
 
-  //Nhận dữ liệu nhiệt độ
-  @MessagePattern(MQTT_TOPICS.TEMPERATURE)
-  getNotificationsTemperature(
+  @MessagePattern(MQTT_TOPICS.TEMPERATURE + '/+')
+  async getNotificationsTemperature(
     @Payload() data: number[],
     @Ctx() context: MqttContext,
   ) {
-    return this.gasWarningService.getTemperature(data);
+    const topic = context.getTopic();
+    const deviceId = this.extractDeviceId(topic, MQTT_TOPICS.TEMPERATURE);
+    return this.gasWarningService.getTemperature(deviceId, data);
   }
 
-  //Nhận dữ liệu độ ẩm
-  @MessagePattern(MQTT_TOPICS.HUMIDITY)
-  getNotificationsHumidity(
+  @MessagePattern(MQTT_TOPICS.HUMIDITY + '/+')
+  async getNotificationsHumidity(
     @Payload() data: number[],
     @Ctx() context: MqttContext,
   ) {
-    return this.gasWarningService.getHumidity(data);
+    const topic = context.getTopic();
+    const deviceId = this.extractDeviceId(topic, MQTT_TOPICS.HUMIDITY);
+    return this.gasWarningService.getHumidity(deviceId, data);
   }
 
-  //Nhận dữ liệu gas
-  @MessagePattern(MQTT_TOPICS.GASLEVEL)
+  @MessagePattern(MQTT_TOPICS.GASLEVEL + '/+')
   async getNotificationsGas(
     @Payload() data: number[],
     @Ctx() context: MqttContext,
   ) {
-    return this.gasWarningService.getGasLevel(data);
+    const topic = context.getTopic();
+    const deviceId = this.extractDeviceId(topic, MQTT_TOPICS.GASLEVEL);
+    return this.gasWarningService.getGasLevel(deviceId, data);
   }
 
-  @MessagePattern(MQTT_TOPICS.GASWARNING_CONTROL)
-  getNotificationsWarning(
-    @Payload() data: number[],
-    @Ctx() context: MqttContext,
-  ) {
-    console.log('Received data:', data);
+  @MessagePattern(MQTT_TOPICS.GASWARNING_CONTROL + '/+')
+  getNotificationsWarning(@Payload() data: any, @Ctx() context: MqttContext) {
+    const topic = context.getTopic();
+    const deviceId = this.extractDeviceId(
+      topic,
+      MQTT_TOPICS.GASWARNING_CONTROL,
+    );
+    console.log(`Warning notification for device ${deviceId}:`, data);
+  }
+
+  private extractDeviceId(topic: string, baseTopic: string): string {
+    const deviceId = topic.replace(`${baseTopic}/`, '');
+    if (!deviceId) {
+      throw new Error(`Could not extract deviceId from topic: ${topic}`);
+    }
+    return deviceId;
   }
 }

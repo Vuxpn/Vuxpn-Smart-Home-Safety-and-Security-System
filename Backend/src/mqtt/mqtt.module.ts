@@ -6,6 +6,7 @@ import { GasWarningModule } from 'src/gaswarning/gasWarning.module';
 import { DevicesModule } from 'src/devices/devices.module';
 import { DevicesService } from 'src/devices/devices.service';
 import { GasWarningController } from 'src/gaswarning/gasWarning.controller';
+import { GasWarningGateway } from 'src/gaswarning/gasWarning.gateway';
 
 @Module({
   imports: [
@@ -34,7 +35,7 @@ import { GasWarningController } from 'src/gaswarning/gasWarning.controller';
     forwardRef(() => DevicesModule),
   ],
   controllers: [GasWarningController],
-  providers: [GasWarningService, DevicesService],
+  providers: [GasWarningService, DevicesService, GasWarningGateway],
   exports: [ClientsModule],
 })
 export class MqttModule {}

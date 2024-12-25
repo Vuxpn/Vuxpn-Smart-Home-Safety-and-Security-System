@@ -9,8 +9,9 @@ import {
   CacheModule,
   CacheStore,
 } from '@nestjs/cache-manager';
-import { APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { redisStore } from 'cache-manager-redis-yet';
+import { AuthGuard } from './auth.guard';
 @Module({
   imports: [
     // CacheModule.registerAsync({
@@ -38,10 +39,15 @@ import { redisStore } from 'cache-manager-redis-yet';
   ],
   controllers: [AuthController],
   providers: [
+    AuthGuard,
     AuthService,
+    // {
+    //   provide: APP_INTERCEPTOR,
+    //   useClass: CacheInterceptor,
+    // },
     {
-      provide: APP_INTERCEPTOR,
-      useClass: CacheInterceptor,
+      provide: APP_GUARD,
+      useClass: AuthGuard,
     },
   ],
 })

@@ -16,6 +16,11 @@ export class CreateDeviceDto {
   @IsString()
   @IsOptional()
   description?: string;
+
+  @IsString()
+  @IsEnum(['Light', 'Atmosphere Sensor', 'Security Camera', 'Other'])
+  @IsNotEmpty()
+  type: string;
 }
 
 export class UpdateDeviceDto {

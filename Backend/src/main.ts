@@ -3,7 +3,7 @@ import { AppModule } from './app.module';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-
+import { CustomTcpServer } from './tcp/tcp.service';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const config = new DocumentBuilder()
@@ -24,6 +24,9 @@ async function bootstrap() {
     )
     .build();
   const configService = app.get(ConfigService);
+  const host = configService.get<string>('HOST');
+  const port = parseInt(configService.get<string>('PORT'), 10);
+
   try {
     app.connectMicroservice<MicroserviceOptions>({
       transport: Transport.MQTT,
@@ -35,16 +38,35 @@ async function bootstrap() {
         rejectUnauthorized: false,
       },
     });
+    app.connectMicroservice<MicroserviceOptions>({
+      strategy: new CustomTcpServer({
+        host,
+        port: port + 1,
+      }),
+    });
 
     // Bắt đầu tất cả các microservices
     await app.startAllMicroservices();
     console.log('All microservices are running.');
+    // await app.listen(port, host, () => {
+    //   console.log(`Server is running on ${host}:${port}`, 'Bootstrap');
+    // });
   } catch (error) {
     console.error('Error starting microservice:', error);
   }
   const documentFactory = () => SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, documentFactory);
 
-  await app.listen(3001);
+  // Enable CORS
+  app.enableCors({
+    origin: 'http://localhost:5173', // Vite default port
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  });
+
+  await app.listen(port, host, () => {
+    console.log(`Server is running on ${host}:${port}`, 'Bootstrap');
+  });
 }
 bootstrap();

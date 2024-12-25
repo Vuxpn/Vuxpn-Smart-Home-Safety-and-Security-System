@@ -202,4 +202,68 @@ export class HomesService {
 
     return updatedHome;
   }
+
+  async addMemberByEmail(
+    homeId: string,
+    email: string,
+    userId: string,
+  ): Promise<Home> {
+    if (!homeId) {
+      throw new HttpException('Home ID is required', HttpStatus.BAD_REQUEST);
+    }
+
+    const [home, memberUser] = await Promise.all([
+      this.homeModel.findOne({ _id: homeId, owner: userId }),
+      this.userModel.findOne({ email }),
+    ]);
+
+    if (!home) {
+      throw new HttpException(
+        'Home not found or unauthorized',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    if (!memberUser) {
+      throw new HttpException(
+        'User with this email not found',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    // Check if user is already a member
+    if (
+      home.members
+        .map((m) => m.toString())
+        .includes(memberUser._id.toString()) ||
+      home.owner.toString() === memberUser._id.toString()
+    ) {
+      throw new HttpException(
+        'User is already a member',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    try {
+      const updatedHome = await this.homeModel
+        .findByIdAndUpdate(
+          homeId,
+          { $addToSet: { members: memberUser._id } },
+          { new: true },
+        )
+        .populate('owner', 'name email')
+        .populate('members', 'name email');
+
+      await this.userModel.findByIdAndUpdate(memberUser._id, {
+        $addToSet: { memberOfHomes: homeId },
+      });
+
+      return updatedHome;
+    } catch (error) {
+      throw new HttpException(
+        'Failed to add member to home',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
 }

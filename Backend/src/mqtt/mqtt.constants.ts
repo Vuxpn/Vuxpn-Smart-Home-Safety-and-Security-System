@@ -23,8 +23,10 @@ export const MQTT_TOPICS = {
   // Warning status (ESP32 -> Server)
   GASWARNING_STATUS: 'iot/warning/status',
   GASWARNING_CHANGE_VALUE: 'iot/warning/change',
+  GASWARNING_CONTROL_FAN: 'iot/warning/fan',
 
   //detection device
   DETECTION_CHANGE_TIME: 'iot/device/detection/timeout',
   DETECTION_CHANGE_MODE: 'iot/device/detection/mode',
+  DETECTION_STATUS: 'iot/device/+/detection/status',
 };

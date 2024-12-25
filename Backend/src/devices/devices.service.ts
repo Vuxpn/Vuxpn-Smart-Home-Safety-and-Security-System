@@ -56,8 +56,8 @@ export class DevicesService {
     return device;
   }
 
-  async getDeviceById(deviceId: string): Promise<Device> {
-    const device = await this.deviceModel.findOne({ deviceId });
+  async getDeviceById(id: string): Promise<Device> {
+    const device = await this.deviceModel.findOne({ _id: id });
     if (!device) {
       throw new HttpException('Không tìm thấy thiết bị', HttpStatus.NOT_FOUND);
     }
@@ -159,7 +159,6 @@ export class DevicesService {
   }
 
   async connectDevice(deviceId: string): Promise<{ message: string }> {
-    this.getDeviceById(deviceId);
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         this.connectionCallbacks.delete(deviceId);
