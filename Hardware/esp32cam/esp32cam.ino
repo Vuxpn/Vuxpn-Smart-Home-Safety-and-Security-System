@@ -16,15 +16,15 @@ const char* MQTT_USER = "vuphan";
 const char* MQTT_PASS = "Vu15102003@";
 const int MQTT_PORT = 8883;
 
-// API Configuration
-const char* API_HOST = "192.168.90.167";
-const int API_PORT = 3001;
-const char* API_PATH = "/detectionwarning/upload/thietbi5";
+// HTTP Server settings
+String serverName = "192.168.26.167";   
+String serverPath = "/detectionwarning/upload/thietbi5";
+const int serverPort = 3001;
 
 // Device Configuration
 const String DEVICE_ID = "thietbi5";
 #define FLASH_PIN 4
-RTC_DATA_ATTR uint32_t frameCounter = 0; // Persists through deep sleep
+RTC_DATA_ATTR uint32_t frameCounter = 0;
 
 // Camera Configuration
 #define PWDN_GPIO_NUM     32
@@ -44,171 +44,201 @@ RTC_DATA_ATTR uint32_t frameCounter = 0; // Persists through deep sleep
 #define HREF_GPIO_NUM     23
 #define PCLK_GPIO_NUM     22
 
-// Global Objects
 WiFiClientSecure secureClient;
 PubSubClient mqttClient(secureClient);
+WiFiClient httpClient;
 
 void setupCamera() {
-  camera_config_t config;
-  config.ledc_channel = LEDC_CHANNEL_0;
-  config.ledc_timer = LEDC_TIMER_0;
-  config.pin_d0 = Y2_GPIO_NUM;
-  config.pin_d1 = Y3_GPIO_NUM;
-  config.pin_d2 = Y4_GPIO_NUM;
-  config.pin_d3 = Y5_GPIO_NUM;
-  config.pin_d4 = Y6_GPIO_NUM;
-  config.pin_d5 = Y7_GPIO_NUM;
-  config.pin_d6 = Y8_GPIO_NUM;
-  config.pin_d7 = Y9_GPIO_NUM;
-  config.pin_xclk = XCLK_GPIO_NUM;
-  config.pin_pclk = PCLK_GPIO_NUM;
-  config.pin_vsync = VSYNC_GPIO_NUM;
-  config.pin_href = HREF_GPIO_NUM;
-  config.pin_sccb_sda = SIOD_GPIO_NUM;
-  config.pin_sccb_scl = SIOC_GPIO_NUM;
-  config.pin_pwdn = PWDN_GPIO_NUM;
-  config.pin_reset = RESET_GPIO_NUM;
-  config.xclk_freq_hz = 20000000;
-  config.pixel_format = PIXFORMAT_JPEG;
-  config.frame_size = FRAMESIZE_VGA;
-  config.jpeg_quality = 12;
-  config.fb_count = 2;
+    camera_config_t config;
+    config.ledc_channel = LEDC_CHANNEL_0;
+    config.ledc_timer = LEDC_TIMER_0;
+    config.pin_d0 = Y2_GPIO_NUM;
+    config.pin_d1 = Y3_GPIO_NUM;
+    config.pin_d2 = Y4_GPIO_NUM;
+    config.pin_d3 = Y5_GPIO_NUM;
+    config.pin_d4 = Y6_GPIO_NUM;
+    config.pin_d5 = Y7_GPIO_NUM;
+    config.pin_d6 = Y8_GPIO_NUM;
+    config.pin_d7 = Y9_GPIO_NUM;
+    config.pin_xclk = XCLK_GPIO_NUM;
+    config.pin_pclk = PCLK_GPIO_NUM;
+    config.pin_vsync = VSYNC_GPIO_NUM;
+    config.pin_href = HREF_GPIO_NUM;
+    config.pin_sccb_sda = SIOD_GPIO_NUM;
+    config.pin_sccb_scl = SIOC_GPIO_NUM;
+    config.pin_pwdn = PWDN_GPIO_NUM;
+    config.pin_reset = RESET_GPIO_NUM;
+    config.xclk_freq_hz = 20000000;
+    config.pixel_format = PIXFORMAT_JPEG;
+    config.frame_size = FRAMESIZE_VGA;
+    config.jpeg_quality = 12;
+    config.fb_count = 1;  // Reduced from 2 to 1 to avoid frame buffering
 
-  esp_err_t err = esp_camera_init(&config);
-  if (err != ESP_OK) {
-    Serial.printf("Camera init failed: 0x%x", err);
-    ESP.restart();
-  }
+    esp_err_t err = esp_camera_init(&config);
+    if (err != ESP_OK) {
+        Serial.printf("Camera init failed: 0x%x", err);
+        ESP.restart();
+    }
+
+    // Initial camera settings
+    sensor_t * s = esp_camera_sensor_get();
+    s->set_contrast(s, 2);
+    s->set_brightness(s, 2);
+    s->set_saturation(s, 2);
 }
 
 void connectWiFi() {
-  WiFi.begin(WIFI_SSID, WIFI_PASS);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-  Serial.println("\nWiFi connected");
+    WiFi.begin(WIFI_SSID, WIFI_PASS);
+    while (WiFi.status() != WL_CONNECTED) {
+        delay(500);
+        Serial.print(".");
+    }
+    Serial.println("\nWiFi connected");
 }
 
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
-  String message;
-  message.reserve(length);
-  for (unsigned int i = 0; i < length; i++) {
-    message += (char)payload[i];
-  }
-  Serial.println("Message arrived ["+String(topic)+"]"+ message);
-  if (String(topic) == "iot/device/pir/status") {
-    StaticJsonDocument<200> doc;
-    if (!deserializeJson(doc, message)) {
-      if (doc["status"] == "motion_detected") {
-        captureAndUpload();
-      }
+    String message;
+    for (unsigned int i = 0; i < length; i++) {
+        message += (char)payload[i];
     }
-  }
+    Serial.println("Message arrived ["+String(topic)+"]"+ message);
+    
+    if (String(topic) == "iot/device/pir/status") {
+        StaticJsonDocument<200> doc;
+        if (!deserializeJson(doc, message)) {
+            if (doc["status"] == "motion_detected") {
+                // Clear any pending camera operations
+                camera_fb_t * fb = NULL;
+                esp_camera_fb_return(fb);
+                
+                // Small delay to ensure camera is ready
+                delay(100);
+                
+                captureAndUpload();
+            }
+        }
+    }
 }
 
 void reconnectMQTT() {
-  while (!mqttClient.connected()) {
-    String clientId = "ESP32-CAM-" + String(random(0xffff), HEX);
-    if (mqttClient.connect(clientId.c_str(), MQTT_USER, MQTT_PASS)) {
-      mqttClient.subscribe("iot/device/pir/status");
-      Serial.println("MQTT connected");
-    } else {
-      delay(5000);
+    while (!mqttClient.connected()) {
+        String clientId = "ESP32-CAM-" + String(random(0xffff), HEX);
+        if (mqttClient.connect(clientId.c_str(), MQTT_USER, MQTT_PASS)) {
+            mqttClient.subscribe("iot/device/pir/status");
+            Serial.println("MQTT connected");
+        } else {
+            delay(5000);
+        }
     }
-  }
 }
 
-String generateFilename() {
-  return String(millis()) + "-" + String(frameCounter++) + ".jpg";
-}
+String captureAndUpload() {
+    String getAll;
+    String getBody;
+    
+    // Turn on flash before capture
+    digitalWrite(FLASH_PIN, HIGH);
+    delay(100);  // Wait for flash to stabilize
+    
+    // Clear any existing frames
+    camera_fb_t * fb = NULL;
+    esp_camera_fb_return(fb);
+    
+    // Get fresh frame
+    fb = esp_camera_fb_get();
+    
+    // Turn off flash immediately after capture
+    digitalWrite(FLASH_PIN, LOW);
 
-void captureAndUpload() {
-  camera_fb_t *fb = NULL;
-  
-  // Flash preparation
-  digitalWrite(FLASH_PIN, HIGH);
-  delay(50);
-  
-  // Capture image
-  fb = esp_camera_fb_get();
-  digitalWrite(FLASH_PIN, LOW);
+    if(!fb) {
+        Serial.println("Camera capture failed");
+        return "Camera capture failed";
+    }
 
-  if (!fb || fb->len == 0) {
-    Serial.println("Capture failed");
-    return;
-  }
+    String filename = "esp32-cam-" + String(millis()) + ".jpg";
 
-  // Prepare HTTP request
-  HTTPClient http;
-  String url = "https://" + String(API_HOST) + ":" + String(API_PORT) + API_PATH;
-  http.begin(url);
-  
-  http.addHeader("Content-Type", "image/jpeg");
-  http.addHeader("X-Device-ID", DEVICE_ID);
-  http.addHeader("X-Frame-ID", String(frameCounter));
+    if (httpClient.connect(serverName.c_str(), serverPort)) {
+        String boundary = "Vuxpn";
+        String head = "--" + boundary + "\r\nContent-Disposition: form-data; name=\"image\"; filename=\"" + 
+                     filename + "\"\r\nContent-Type: image/jpeg\r\n\r\n";
+        String tail = "\r\n--" + boundary + "--\r\n";
 
-  // Send image data
-  int httpCode = http.sendRequest("POST", fb->buf, fb->len);
-  
-  if (httpCode == HTTP_CODE_OK) {
-    String response = http.getString();
-    publishUploadConfirmation(response);
-  } else {
-    Serial.printf("HTTP error: %s\n", http.errorToString(httpCode).c_str());
-  }
+        uint32_t imageLen = fb->len;
+        uint32_t totalLen = imageLen + head.length() + tail.length();
 
-  // Cleanup
-  http.end();
-  esp_camera_fb_return(fb);
-}
+        httpClient.println("POST " + serverPath + " HTTP/1.1");
+        httpClient.println("Host: " + serverName);
+        httpClient.println("Connection: close");
+        httpClient.println("Content-Length: " + String(totalLen));
+        httpClient.println("Content-Type: multipart/form-data; boundary=" + boundary);
+        httpClient.println();
+        httpClient.print(head);
 
-void publishUploadConfirmation(String response) {
-  StaticJsonDocument<256> doc;
-  doc["device_id"] = DEVICE_ID;
-  doc["frame_id"] = frameCounter;
-  doc["status"] = "upload_success";
-  doc["server_response"] = response;
-
-  String payload;
-  serializeJson(doc, payload);
-  mqttClient.publish("iot/device/cam/confirm", payload.c_str());
+        // Send image data in smaller chunks
+        uint8_t *fbBuf = fb->buf;
+        const size_t BLOCK_SIZE = 1024;
+        size_t fbLen = fb->len;
+        
+        for (size_t n=0; n<fbLen; n+=BLOCK_SIZE) {
+            size_t writeSize = min(BLOCK_SIZE, fbLen - n);
+            httpClient.write(fbBuf + n, writeSize);
+            // Small delay to prevent buffer overflow
+            delay(1);
+        }
+        
+        httpClient.print(tail);
+        
+        // Release camera buffer immediately after sending
+        esp_camera_fb_return(fb);
+        
+        // Read response
+        unsigned long timeout = millis();
+        while (millis() - timeout < 5000) {  // Reduced timeout to 5 seconds
+            while (httpClient.available()) {
+                char c = httpClient.read();
+                if (c == '\n' && getAll.length() == 0) {
+                    getAll = "";
+                    continue;
+                }
+                if (c != '\r') getBody += c;
+            }
+            if (getBody.length() > 0) break;
+            delay(1);
+        }
+        
+        httpClient.stop();
+        return getBody;
+        
+    } else {
+        esp_camera_fb_return(fb);
+        return "Connection failed: " + serverName;
+    }
 }
 
 void setup() {
+    Serial.begin(115200);
+    delay(1000);
 
-  Serial.begin(115200);
-  delay(1000);
+    pinMode(FLASH_PIN, OUTPUT);
+    digitalWrite(FLASH_PIN, LOW);
 
-  // Initialize hardware
-  pinMode(FLASH_PIN, OUTPUT);
-  digitalWrite(FLASH_PIN, LOW);
+    connectWiFi();
+    setupCamera();
 
-  // Connect to WiFi
-  connectWiFi();
-
-  // Initialize camera
-  setupCamera();
-
-  // Configure MQTT
-  secureClient.setInsecure();
-  mqttClient.setServer(MQTT_BROKER, MQTT_PORT);
-  mqttClient.setCallback(mqttCallback);
-
- 
+    secureClient.setInsecure();
+    mqttClient.setServer(MQTT_BROKER, MQTT_PORT);
+    mqttClient.setCallback(mqttCallback);
 }
 
 void loop() {
+    if (!mqttClient.connected()) {
+        reconnectMQTT();
+    }
+    mqttClient.loop();
 
-  if (!mqttClient.connected()) {
-    reconnectMQTT();
-  }
-  mqttClient.loop();
-
-  // Add periodic status update
-  static unsigned long lastUpdate = 0;
-  if (millis() - lastUpdate > 30000) {
-    mqttClient.publish("iot/device/cam/status", "online");
-    lastUpdate = millis();
-  }
+    static unsigned long lastUpdate = 0;
+    if (millis() - lastUpdate > 30000) {
+        mqttClient.publish("iot/device/cam/status", "online");
+        lastUpdate = millis();
+    }
 }

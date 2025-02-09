@@ -33,14 +33,8 @@ export class DetectionWarningController {
     return await this.detectionWarningService.uploadFile(file, deviceId);
   }
   @Get('images/:deviceId')
-  async getImages(
-    @Param('deviceId') deviceId: string,
-    @Query('date') date: string,
-  ): Promise<Image[]> {
-    return await this.detectionWarningService.getImagesByDeviceId(
-      deviceId,
-      date,
-    );
+  async getImages(@Param('deviceId') deviceId: string): Promise<Image[]> {
+    return await this.detectionWarningService.getImagesByDeviceId(deviceId);
   }
 
   @Post('changetimeled/:deviceId')
