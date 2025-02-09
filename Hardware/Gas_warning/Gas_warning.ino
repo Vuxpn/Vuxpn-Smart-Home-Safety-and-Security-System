@@ -57,7 +57,7 @@ const int mqtt_port = 8883;
 //Sub topic
 const char *topic = "iot/security-home";
 const char *topic_warning_control = "iot/warning/control/";  // Topic để nhận lệnh điều khiển LED
-const char *topic_warning_status = "iot/warning/status";    // Topic để gửi trạng thái LED
+const char *topic_warning_status = "iot/warning/status/thietbi4";    // Topic để gửi trạng thái LED
 const char *topic_connect_device = "iot/device/gas/connect"; //Topic nhận yêu cầu kết nối
 
 
@@ -102,7 +102,7 @@ char msg[MSG_BUFFER_SIZE];
 
 // Add new constants for timing
 const unsigned long MQTT_PUBLISH_INTERVAL = 5000;  // 5 seconds
-const unsigned long SENSOR_READ_INTERVAL = 2000;   // 2 seconds
+const unsigned long SENSOR_READ_INTERVAL = 5000;   // 5 seconds
 unsigned long lastMqttPublish = 0;
 unsigned long lastSensorRead = 0;
 
@@ -127,29 +127,24 @@ void reconnect() {
   if (!client.connected()) {
     Serial.print("Attempting MQTT connection...");
     String clientID = "ESPClient-" + String(random(0xffff), HEX);
-    
-    if (client.connect(clientID.c_str(), mqtt_username, mqtt_password)) {
+    if (client.connect(clientID.c_str(), mqtt_username, mqtt_password)){
       Serial.println("connected");
-      // Consolidate subscriptions
-      const String topics[] = {
-        "iot/device/create",
-        "iot/device/connect",
-        "iot/device/disconnect",
-        "iot/device/warning/control",
-        "iot/warning/change",
-        "iot/warning/fan"
-      };
-      
-      for (const String& baseTopic : topics) {
-        client.subscribe((baseTopic + macAddress).c_str());
-      }
+      client.subscribe(("iot/device/create/" + macAddress).c_str());
+      client.subscribe(("iot/device/connect/" + macAddress).c_str());
+      client.subscribe(("iot/device/disconnect/" + macAddress).c_str());
+      client.subscribe(("iot/device/warning/control/"+ macAddress).c_str());
+      client.subscribe(("iot/warning/change/"+ macAddress).c_str());
+      client.subscribe(("iot/warning/fan/"+ macAddress).c_str());
       
       client.publish(topic_warning_status, warningState ? "ON" : "OFF");
     } else {
       Serial.printf("failed, rc=%d\n", client.state());
+      delay(5000);
     }
+    }
+    
   }
-}
+
 //-----Call back Method for Receiving MQTT massage---------
 void callback(char* topic, byte* payload, unsigned int length) {
   //String deviceMac = getMacAddress();
@@ -160,18 +155,19 @@ void callback(char* topic, byte* payload, unsigned int length) {
   StaticJsonDocument<200> doc;
   deserializeJson(doc, incommingMessage);
 
+
   // 
-  if (String(topic).startsWith("iot/device/create" + macAddress)) {
+  if (String(topic).startsWith("iot/device/create/" + macAddress)) {
     handleVerification(doc);
-  } else if (String(topic).startsWith("iot/device/connect" + macAddress)) {
+  } else if (String(topic).startsWith("iot/device/connect/" + macAddress)) {
     handleConnect(doc);
-  } else if (String(topic).startsWith("iot/device/disconnect" + macAddress)) {
+  } else if (String(topic).startsWith("iot/device/disconnect/" + macAddress)) {
     handleDisconnect(doc);
-  } else if (String(topic).startsWith("iot/device/warning/control" + macAddress)) {
-    handleWarning(doc);
-  }else if(String(topic).startsWith("iot/warning/change" + macAddress)){
+    } else if (String(topic).startsWith("iot/device/warning/control/" + macAddress)) {
+      handleWarning(doc);
+  }else if(String(topic).startsWith("iot/warning/change/" + macAddress)){
     handleWarningValue(doc);
-  }else if(String(topic).startsWith("iot/warning/fan" + macAddress)){
+  }else if(String(topic).startsWith("iot/warning/fan/" + macAddress)){
     handleFan(doc);
   }
 
@@ -232,8 +228,8 @@ void handleDisconnect(const JsonDocument& doc) {
     publishMessage(responseTopic.c_str(), responseMessage, true);
   }
 }
-
 void handleWarning(const JsonDocument& doc) {
+  //String deviceMac = getMacAddress();
   String deviceId = doc["data"]["deviceId"];
   String state = doc["data"]["state"];
   
@@ -268,32 +264,38 @@ void handleWarningValue(const JsonDocument& doc){
   if(deviceId == macAddress && isConnected == true){
     gasWarning = doc["data"]["gasValue"];
     temperatureWarning = doc["data"]["temValue"];
-    Serial.println('gasWarning Value:'+ gasWarning );
-    Serial.println('temperatureWarning Value:'+ temperatureWarning );
+    Serial.println("gasWarning Value: " + String(gasWarning));
+    Serial.println("temperatureWarning Value: " + String(temperatureWarning));
   }
 }
 
-void handleFan(const JsonDocument& doc){
+void handleFan(const JsonDocument& doc) {
+  //String deviceMac = getMacAddress();
   String deviceId = doc["data"]["deviceId"];
   String state = doc["data"]["state"];
-    Serial.print("Fan Control Command: ");
+  
+   //Debug
+    Serial.print("Warning Command: ");
     Serial.println(state);
     Serial.println(deviceId);
 
     if (deviceId == macAddress && isConnected == true) {
         // Check message control warning
         if (state == "On" || state == "ON" || state == "on" || state == "1") {
-            fanControl = true;
+           fanControl = true;
+           messageControl = true;
             digitalWrite(FAN_PIN, HIGH);
             Serial.println("Fan turned ON via MQTT");
         }
         else if (state == "Off" || state == "OFF" || state == "off" || state == "0") {
             fanControl = false;
+            messageControl = false;
             digitalWrite(FAN_PIN, LOW);
             Serial.println("Fan turned OFF via MQTT");
         }
     }
     
+
 }
 
 void setup() {

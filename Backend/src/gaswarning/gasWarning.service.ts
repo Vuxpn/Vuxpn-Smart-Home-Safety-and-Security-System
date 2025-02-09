@@ -12,6 +12,7 @@ import { WarningValueDto } from './dto/warningValue.dto';
 import { WarningFanDto } from './dto/warningFan.dto';
 import { GasWarningGateway } from './gasWarning.gateway';
 import { lastValueFrom } from 'rxjs';
+import { ledControlDto } from './dto/ledControl';
 @Injectable()
 export class GasWarningService {
   private readonly logger = new Logger(GasWarningService.name);
@@ -59,6 +60,37 @@ export class GasWarningService {
       throw error;
     }
   }
+  async FanwarningControl(data: WarningControlDto) {
+    try {
+      const topic = `${MQTT_TOPICS.GASWARNING_CONTROL_FAN}/${data.deviceId}`;
+      const message = { deviceId: data.deviceId, state: data.state };
+      console.log(`Emitting message to topic ${topic}:`, message);
+      const result = await lastValueFrom(this.client.emit(topic, message));
+      console.log('Emit result:', result);
+      return result;
+    } catch (error) {
+      this.logger.error(
+        `Failed to control warning: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  async ledControl(data: ledControlDto) {
+    try {
+      const topic = `${MQTT_TOPICS.LED_CONTROL}/${data.deviceId}`;
+      const message = { deviceId: data.deviceId, state: data.state };
+      console.log(`Emitting message to topic ${topic}`, message);
+      const result = await lastValueFrom(this.client.emit(topic, message));
+      console.log('Emit result:', result);
+      return result;
+    } catch (error) {
+      this.logger.error(`Failed to control led: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
   //Điều khiển mức độ cảnh báo
   changeWarningLevel(data: WarningValueDto) {
     const topic = `${MQTT_TOPICS.GASWARNING_CHANGE_VALUE}/${data.deviceId}`;

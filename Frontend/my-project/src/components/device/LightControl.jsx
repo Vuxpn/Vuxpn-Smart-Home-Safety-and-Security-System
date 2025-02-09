@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Lightbulb } from 'lucide-react';
-import axios from 'axios';
+import axiosInstance from '../../utils/axios';
 
-const SmartHomeLights = () => {
+const SmartHomeLights = ({ deviceId }) => {
     const [rooms, setRooms] = useState({
         livingRoom: false,
         kitchen: false,
@@ -19,17 +19,36 @@ const SmartHomeLights = () => {
         setLoading((prev) => ({ ...prev, [room]: true }));
         setError('');
 
-        try {
-            const response = await axios.post(`http://your-api-url/api/lights/${room}`, {
-                state: !rooms[room],
-            });
+        const endpoints = {
+            livingRoom: {
+                on: 'ledLivOn',
+                off: 'ledLivOff',
+            },
+            kitchen: {
+                on: 'ledKitOn',
+                off: 'ledKitOff',
+            },
+            bedroom: {
+                on: 'ledBedOn',
+                off: 'ledBedOff',
+            },
+        };
 
-            if (response.data.success) {
-                setRooms((prev) => ({ ...prev, [room]: !prev[room] }));
+        try {
+            const endpoint = rooms[room] ? endpoints[room].off : endpoints[room].on;
+            const response = await axiosInstance.post(`/device/${deviceId}/${endpoint}`);
+
+            // Kiểm tra response và cập nhật trạng thái
+            if (response.status === 200 || response.status === 201) {
+                setRooms((prev) => ({
+                    ...prev,
+                    [room]: !prev[room],
+                }));
             } else {
                 throw new Error('Không thể điều khiển đèn');
             }
         } catch (err) {
+            console.error('Error details:', err);
             setError('Đã xảy ra lỗi khi điều khiển đèn. Vui lòng thử lại.');
         } finally {
             setLoading((prev) => ({ ...prev, [room]: false }));

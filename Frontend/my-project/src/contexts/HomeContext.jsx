@@ -181,43 +181,20 @@ export const HomeProvider = ({ children }) => {
             setLoading(true);
             const response = await axiosInstance.post(`/home/${homeId}/members`, { email });
 
-            // Update currentHome if we're viewing the home that was modified
+            // Cập nhật danh sách thành viên
+            const updatedMembers = response.data.members;
+            setHomes((prev) => prev.map((home) => (home._id === homeId ? { ...home, members: updatedMembers } : home)));
+
             if (currentHome?._id === homeId) {
-                setCurrentHome({
-                    ...currentHome,
-                    members: response.data.members,
-                });
+                setCurrentHome((prev) => ({ ...prev, members: updatedMembers }));
             }
 
-            // Update the home in the homes list
-            setHomes(homes.map((home) => (home._id === homeId ? { ...home, members: response.data.members } : home)));
-
-            setError(null);
-            toast.success('Member added successfully!', {
-                position: 'top-right',
-                autoClose: 3000,
-                style: {
-                    backgroundColor: '#f0fdf4',
-                    color: '#166534',
-                    borderRadius: '8px',
-                    border: '1px solid #bbf7d0',
-                },
-            });
+            toast.success('Thêm thành viên thành công!');
             return response.data;
         } catch (err) {
-            const errorMessage = err.response?.data?.message || 'Failed to add member';
-            setError(errorMessage);
-            toast.error(errorMessage, {
-                position: 'top-right',
-                autoClose: 5000,
-                style: {
-                    backgroundColor: '#fef2f2',
-                    color: '#991b1b',
-                    borderRadius: '8px',
-                    border: '1px solid #fecaca',
-                },
-            });
-            throw new Error(errorMessage);
+            const errorMsg = err.response?.data?.message || 'Lỗi khi thêm thành viên';
+            toast.error(errorMsg);
+            throw errorMsg;
         } finally {
             setLoading(false);
         }

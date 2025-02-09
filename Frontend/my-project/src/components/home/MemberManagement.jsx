@@ -2,25 +2,25 @@ import { useState } from 'react';
 import { useHome } from '../../contexts/HomeContext';
 
 export default function MemberManagement({ homeId }) {
-    const [email, setEmail] = useState('');
     const { addMember, removeMember, currentHome, loading } = useHome();
+    const [email, setEmail] = useState('');
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
             await addMember(homeId, email);
-            setEmail(''); // Clear input after successful addition
+            setEmail(''); // Reset input
         } catch (error) {
-            console.error('Error adding member:', error);
+            console.error('Lỗi thêm thành viên:', error);
         }
     };
 
-    const handleRemoveMember = async (memberId) => {
-        if (window.confirm('Are you sure you want to remove this member?')) {
+    const handleRemove = async (memberId) => {
+        if (window.confirm('Xác nhận xoá thành viên?')) {
             try {
                 await removeMember(homeId, memberId);
             } catch (error) {
-                console.error('Error removing member:', error);
+                console.error('Lỗi xoá thành viên:', error);
             }
         }
     };
@@ -38,7 +38,7 @@ export default function MemberManagement({ homeId }) {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                        placeholder="Enter member's email"
+                        placeholder="Add email..."
                         required
                     />
                 </div>
@@ -47,7 +47,7 @@ export default function MemberManagement({ homeId }) {
                     disabled={loading}
                     className="w-full inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
                 >
-                    {loading ? 'Adding...' : 'Add Member'}
+                    {loading ? 'Adding...' : 'Add member'}
                 </button>
             </form>
 
@@ -57,11 +57,12 @@ export default function MemberManagement({ homeId }) {
                     {currentHome?.members?.map((member) => (
                         <li key={member._id} className="py-4 flex justify-between items-center">
                             <div>
-                                <p className="text-sm font-medium text-gray-900">{member.name}</p>
-                                <p className="text-sm text-gray-500">{member.email}</p>
+                                <p className="text-sm font-medium text-gray-900">
+                                    {member.name} ({member.email})
+                                </p>
                             </div>
                             <button
-                                onClick={() => handleRemoveMember(member._id)}
+                                onClick={() => handleRemove(member._id)}
                                 className="ml-4 inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                                 disabled={loading}
                             >

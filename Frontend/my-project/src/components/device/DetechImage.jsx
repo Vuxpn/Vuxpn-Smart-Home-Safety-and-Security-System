@@ -1,18 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import axiosInstance from '../../utils/axios';
-import { Card, List, Image, Typography, Space } from 'antd';
+import { Card, List, Image, Typography, Space, DatePicker } from 'antd';
 import { AlertOutlined } from '@ant-design/icons';
+import moment from 'moment';
+import 'moment/locale/vi';
 
 const { Text, Title } = Typography;
 
 const DetechImage = ({ deviceId }) => {
     const [images, setImages] = useState([]);
+    const [selectedDate, setSelectedDate] = useState(null);
 
     useEffect(() => {
         const fetchImages = async () => {
             try {
-                const response = await axiosInstance.get(`/detectionwarning/images/${deviceId}`);
-                setImages(response.data);
+                const params = {
+                    date: selectedDate ? moment(selectedDate).format('YYYY-MM-DD') : null,
+                };
+                const response = await axiosInstance.get(`/detectionwarning/images/${deviceId}`, { params });
+
+                // Sắp xếp theo thời gian mới nhất đầu tiên
+                const sortedImages = response.data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                setImages(sortedImages);
             } catch (error) {
                 console.error('Error fetching images:', error);
             }
@@ -21,7 +30,7 @@ const DetechImage = ({ deviceId }) => {
         fetchImages();
         const interval = setInterval(fetchImages, 30000);
         return () => clearInterval(interval);
-    }, [deviceId]);
+    }, [deviceId, selectedDate]);
 
     return (
         <div
@@ -52,6 +61,34 @@ const DetechImage = ({ deviceId }) => {
                 <Title level={4} style={{ margin: 0, justifyItems: 'center' }}>
                     Cảnh Báo Xâm Nhập
                 </Title>
+            </div>
+
+            <div
+                style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '20px',
+                    padding: '0 16px',
+                }}
+            >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <AlertOutlined style={{ fontSize: '24px', color: '#ff4d4f' }} />
+                    <Title level={4} style={{ margin: 0 }}>
+                        Cảnh Báo Xâm Nhập
+                    </Title>
+                </div>
+                <DatePicker
+                    format="DD/MM/YYYY"
+                    placeholder="Chọn ngày"
+                    onChange={(date) => setSelectedDate(date)}
+                    style={{ width: 200 }}
+                    locale={{
+                        lang: {
+                            locale: 'vi',
+                        },
+                    }}
+                />
             </div>
 
             <List

@@ -47,7 +47,18 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
     };
 
-    return <AuthContext.Provider value={{ user, loading, login, logout }}>{children}</AuthContext.Provider>;
+    const register = async (email, password) => {
+        try {
+            const response = await axiosInstance.post('/auth/register', { email, password });
+            return response.data;
+        } catch (error) {
+            // Xử lý lỗi từ backend
+            const errorMessage = error.response?.data?.message || 'Registration failed';
+            throw new Error(errorMessage);
+        }
+    };
+
+    return <AuthContext.Provider value={{ user, loading, login, logout, register }}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {

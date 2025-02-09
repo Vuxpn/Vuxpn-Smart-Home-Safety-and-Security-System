@@ -1,4 +1,17 @@
 // cloudinary-response.ts
-import { UploadApiErrorResponse, UploadApiResponse } from 'cloudinary';
+export interface CloudinaryResponse {
+  _id: string; // MongoDB ObjectId as string
+  url: string;
+  device: {
+    deviceId: string;
+    name: string;
+  };
+  timestamp: number;
+  cloudinary: CloudinaryResult | null;
+}
 
-export type CloudinaryResponse = UploadApiResponse | UploadApiErrorResponse;
+interface CloudinaryResult {
+  secure_url: string;
+  public_id: string;
+  // Add other Cloudinary response fields as needed
+}

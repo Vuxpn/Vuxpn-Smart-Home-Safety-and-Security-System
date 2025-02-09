@@ -35,13 +35,10 @@ export class AuthService {
       return createUser;
     } catch (error) {
       if (error?.code === 11000) {
-        throw new HttpException(
-          'User with that email already exists',
-          HttpStatus.BAD_REQUEST,
-        );
+        throw new HttpException('Email đã tồn tại', HttpStatus.BAD_REQUEST);
       }
       throw new HttpException(
-        'Something went wrong',
+        error.message || 'Đăng ký thất bại',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

@@ -208,62 +208,39 @@ export class HomesService {
     email: string,
     userId: string,
   ): Promise<Home> {
-    if (!homeId) {
-      throw new HttpException('Home ID is required', HttpStatus.BAD_REQUEST);
-    }
-
     const [home, memberUser] = await Promise.all([
       this.homeModel.findOne({ _id: homeId, owner: userId }),
       this.userModel.findOne({ email }),
     ]);
 
-    if (!home) {
-      throw new HttpException(
-        'Home not found or unauthorized',
-        HttpStatus.NOT_FOUND,
-      );
-    }
+    if (!home)
+      throw new HttpException('Không tìm thấy nhà', HttpStatus.NOT_FOUND);
+    if (!memberUser)
+      throw new HttpException('Email không tồn tại', HttpStatus.NOT_FOUND);
 
-    if (!memberUser) {
-      throw new HttpException(
-        'User with this email not found',
-        HttpStatus.NOT_FOUND,
-      );
-    }
-
-    // Check if user is already a member
+    // Kiểm tra thành viên đã tồn tại
+    const isExistingMember = home.members.some(
+      (m) => m.toString() === memberUser._id.toString(),
+    );
     if (
-      home.members
-        .map((m) => m.toString())
-        .includes(memberUser._id.toString()) ||
+      isExistingMember ||
       home.owner.toString() === memberUser._id.toString()
     ) {
-      throw new HttpException(
-        'User is already a member',
-        HttpStatus.BAD_REQUEST,
-      );
+      throw new HttpException('Thành viên đã tồn tại', HttpStatus.BAD_REQUEST);
     }
 
-    try {
-      const updatedHome = await this.homeModel
-        .findByIdAndUpdate(
-          homeId,
-          { $addToSet: { members: memberUser._id } },
-          { new: true },
-        )
-        .populate('owner', 'name email')
-        .populate('members', 'name email');
+    const updatedHome = await this.homeModel
+      .findByIdAndUpdate(
+        homeId,
+        { $addToSet: { members: memberUser._id } },
+        { new: true },
+      )
+      .populate('members', 'name email');
 
-      await this.userModel.findByIdAndUpdate(memberUser._id, {
-        $addToSet: { memberOfHomes: homeId },
-      });
+    await this.userModel.findByIdAndUpdate(memberUser._id, {
+      $addToSet: { memberOfHomes: homeId },
+    });
 
-      return updatedHome;
-    } catch (error) {
-      throw new HttpException(
-        'Failed to add member to home',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+    return updatedHome;
   }
 }

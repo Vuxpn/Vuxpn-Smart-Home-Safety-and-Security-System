@@ -8,6 +8,7 @@ import {
   UploadedFile,
   UseGuards,
   UseInterceptors,
+  Query,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { DetectionWarningService } from './detection.service';
@@ -15,6 +16,7 @@ import { Image } from '../schema/image.schema';
 import { DeviceGuard } from 'src/devices/device.guard';
 import { ChangeModeDto, ChangeTimeDto } from './dto/detection.dto';
 import { Public } from 'src/auth/decorators/public.decorator';
+import { SystemMode } from './dto/detection.dto';
 
 @Controller('detectionwarning')
 export class DetectionWarningController {
@@ -31,19 +33,78 @@ export class DetectionWarningController {
     return await this.detectionWarningService.uploadFile(file, deviceId);
   }
   @Get('images/:deviceId')
-  async getImages(@Param('deviceId') deviceId: string): Promise<Image[]> {
-    return await this.detectionWarningService.getImagesByDeviceId(deviceId);
+  async getImages(
+    @Param('deviceId') deviceId: string,
+    @Query('date') date: string,
+  ): Promise<Image[]> {
+    return await this.detectionWarningService.getImagesByDeviceId(
+      deviceId,
+      date,
+    );
   }
 
-  @Post('changetime/:deviceId')
-  @UseGuards(DeviceGuard)
-  controlTimeOut(@Body() changeTimeDto: ChangeTimeDto, @Req() request) {
-    this.detectionWarningService.changeTime(changeTimeDto);
+  @Post('changetimeled/:deviceId')
+  changeTimeLed(
+    @Body() changeTimeDto: ChangeTimeDto,
+    @Param('deviceId') deviceId: string,
+  ) {
+    return this.detectionWarningService.changeTimeLed({
+      ...changeTimeDto,
+      deviceId,
+    });
   }
 
-  @Post('changemode/:deviceId')
-  @UseGuards(DeviceGuard)
-  controlchangeMode(@Body() changeModeDto: ChangeModeDto, @Req() request) {
-    this.detectionWarningService.changeMode(changeModeDto);
+  @Post('changetimebuzzer/:deviceId')
+  changeTimeBuzzer(
+    @Body() changeTimeDto: ChangeTimeDto,
+    @Param('deviceId') deviceId: string,
+  ) {
+    return this.detectionWarningService.changeTimeBuzzer({
+      ...changeTimeDto,
+      deviceId,
+    });
+  }
+
+  @Post('safemode/:deviceId')
+  async safeMode(@Param('deviceId') deviceId: string) {
+    return this.detectionWarningService.changeMode({
+      deviceId,
+      mode: SystemMode.SAFE,
+    });
+  }
+
+  @Post('normalmode/:deviceId')
+  async normalMode(@Param('deviceId') deviceId: string) {
+    return this.detectionWarningService.changeMode({
+      deviceId,
+      mode: SystemMode.NORMAL,
+    });
+  }
+
+  @Post(':deviceId/ondetectwarning')
+  async turnOnWarningBuzzer(@Param('deviceId') deviceId: string) {
+    try {
+      const result = await this.detectionWarningService.changeWarning({
+        deviceId,
+        state: 'on',
+      });
+      console.log('Turn on warning detect:', result);
+    } catch (error) {
+      console.error('Error turning on warning:', error);
+      throw error;
+    }
+  }
+  @Post(':deviceId/offdetectwarning')
+  async turnOffWarningBuzzer(@Param('deviceId') deviceId: string) {
+    try {
+      const result = await this.detectionWarningService.changeWarning({
+        deviceId,
+        state: 'off',
+      });
+      console.log('Turn off warning detect:', result);
+    } catch (error) {
+      console.error('Error turning off warning:', error);
+      throw error;
+    }
   }
 }

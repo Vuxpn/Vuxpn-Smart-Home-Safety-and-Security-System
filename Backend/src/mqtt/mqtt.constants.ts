@@ -26,7 +26,13 @@ export const MQTT_TOPICS = {
   GASWARNING_CONTROL_FAN: 'iot/warning/fan',
 
   //detection device
-  DETECTION_CHANGE_TIME: 'iot/device/detection/timeout',
-  DETECTION_CHANGE_MODE: 'iot/device/detection/mode',
-  DETECTION_STATUS: 'iot/device/+/detection/status',
+  UPLOAD_CONFIRMATION: 'iot/device/cam/confirm',
+  CHANGE_TIME_LED: 'iot/device/pir/timeout',
+  CHANGE_MODE: 'iot/device/pir/mode',
+  WARNING_DETECT: 'iot/device/pir/buzzer',
+  CHANGE_TIME_BUZZER: 'iot/device/pir/buzzer_duration',
+  MOTION_DETECTED: 'iot/device/pir/status',
+
+  //led Control
+  LED_CONTROL: 'iot/control/led',
 };

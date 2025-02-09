@@ -1,9 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
+import axiosInstance from '../../utils/axios';
 
 const RegisterForm = () => {
-    const [formData, setForm] = useState({ email: '', password: '', confirmPassword: '' });
+    const [formData, setFormData] = useState({
+        name: '',
+        email: '',
+        password: '',
+        confirmPassword: '',
+    });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
@@ -20,7 +25,7 @@ const RegisterForm = () => {
         setLoading(true);
         try {
             const { confirmPassword, ...registerData } = formData;
-            await axios.post('/auth/register', registerData);
+            await axiosInstance.post('/auth/register', registerData);
             navigate('/login');
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to register');
@@ -39,6 +44,21 @@ const RegisterForm = () => {
                         </div>
                     )}
                     <div className="rounded-md shadow-sm -space-y-px">
+                        <div>
+                            <label htmlFor="name" className="sr-only">
+                                Name
+                            </label>
+                            <input
+                                id="name"
+                                name="name"
+                                type="text"
+                                required
+                                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                                placeholder="Your name"
+                                value={formData.name}
+                                onChange={handleChange}
+                            />
+                        </div>
                         <div>
                             <label htmlFor="email" className="sr-only">
                                 Email address
