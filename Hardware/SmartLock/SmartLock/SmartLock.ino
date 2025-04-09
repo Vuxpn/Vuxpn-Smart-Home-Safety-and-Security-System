@@ -174,7 +174,7 @@ void showDefaultScreen() {
 }
 
 void showInputScreen() {
-  String inputStars = "*";
+  String inputStars = "";
   for (int i = 0; i < inputIndex; i++) {
     inputStars += "*";
   }
@@ -385,6 +385,10 @@ void handleOpenDoor(const JsonDocument& doc){
     if(strcmp(password,currentPassword) == 0){
       unlockDoor();
       failedAttempts = 0;
+      ledSuccess();
+      showCorrectPassword();
+      delay(2000);
+      showDefaultScreen();
       Serial.println("Open door request accepted via MQTT");
       StaticJsonDocument<128> response;
       response["deviceId"] = MAC_ADDRESS;
@@ -392,15 +396,21 @@ void handleOpenDoor(const JsonDocument& doc){
       String payload;
       serializeJson(response, payload);
       publishMessage(BASE_TOPIC + MAC_ADDRESS + "/opendoor/status", payload);
-  } else{
-      //soundFailure();
+  } else {
+      soundFailure();
+      ledError();
       failedAttempts++;
       Serial.print("Failed attempts: ");
       Serial.println(failedAttempts);
+      showWrongPassword(); 
+      delay(2000);
+      showDefaultScreen(); 
       if (failedAttempts >= MAX_ATTEMPTS) {
-        //soundAlarm();  
+        soundAlarm();
+        lockoutTime = millis();
+        showLockoutScreen(); 
       }
-      // Gửi phản hồi thất bại qua MQTT
+
       StaticJsonDocument<128> response;
       response["deviceId"] = MAC_ADDRESS;
       response["status"] = "failed";
@@ -415,6 +425,10 @@ void handleOpenDoor(const JsonDocument& doc){
 void handleLockDoor(const JsonDocument& doc) {
   if (doc["data"]["deviceId"] == MAC_ADDRESS) {
     lockDoor();
+    ledSuccess();
+    showDefaultScreen(); 
+    Serial.println("Lock door request accepted via MQTT");
+
     StaticJsonDocument<128> response;
     response["deviceId"] = MAC_ADDRESS;
     response["status"] = "success";
@@ -424,23 +438,28 @@ void handleLockDoor(const JsonDocument& doc) {
   }
 }
 
-
-void handleChangePassword(const JsonDocument& doc){
-  if(doc["data"]["deviceId"] == MAC_ADDRESS){
+void handleChangePassword(const JsonDocument& doc) {
+  if (doc["data"]["deviceId"] == MAC_ADDRESS) {
     const char* oldPassword = doc["data"]["currentPassword"];
     const char* newPassword = doc["data"]["newPassword"];
     if (strcmp(oldPassword, currentPassword) != 0) {
       Serial.println("Incorrect current password.");
-      sendFailedChangePassword();
-    } else{
-        strcpy(currentPassword, newPassword);
-        savePassword();
-        Serial.print("Password changed successfully :");
-        Serial.print(currentPassword);
-        sendSuccessChangePassword();
+      ledError();
+      showWrongPassword();
+      delay(2000);
+      showDefaultScreen();
+      //sendFailedChangePassword();
+    } else {
+      strcpy(currentPassword, newPassword);
+      savePassword();
+      Serial.print("Password changed successfully: ");
+      Serial.println(currentPassword);
+      ledSuccess();
+      showChangeSuccess(); 
+      //sendSuccessChangePassword();
     }
   }
-  
+  yield();
 }
 
 void sendFailedChangePassword() {
@@ -463,17 +482,6 @@ void sendSuccessChangePassword() {
   publishMessage(BASE_TOPIC + MAC_ADDRESS + "/changepass/status", payload);
 }
 
-void reportStatus() {
-  StaticJsonDocument<128> doc;
-  doc["deviceId"] = MAC_ADDRESS;
-  doc["locked"] = isLocked;
-  doc["failedAttempts"] = failedAttempts;
-  String payload;
-  serializeJson(doc, payload);
-  publishMessage(BASE_TOPIC + MAC_ADDRESS + "/status", payload);
-}
-
-
 void handlePassword() {
   char key = keypad.getKey();
   if (!key){
@@ -490,9 +498,6 @@ void handlePassword() {
 
   switch (mode) {
     case MODE_NORMAL:
-      if (inputIndex > 0 || key != 'B' || key != 'A') {
-        showInputScreen();
-      }
       handleNormalMode(key);
       break;
     case MODE_CHANGE:
@@ -502,12 +507,31 @@ void handlePassword() {
 }
 
 void handleNormalMode(char key) {
-  if (key == '*') {clearInput();showDefaultScreen();}
-  else if (key == '#') verifyPassword();
-  else if (key == 'C' && ++cPressCount >= 2) {mode = MODE_CHANGE; Serial.print("MODE_CHANGE");showChangePasswordStart(); }
-  else if (key == 'D') deletePassword();
-  else if (key == 'B') {lockDoor();showDefaultScreen();ledSuccess();}
-  else if (inputIndex < PASSWORD_LENGTH) addPassword(key);
+  if (key == '*') {
+    clearInput();
+    showDefaultScreen();
+  } else if (key == '#') {
+    verifyPassword();
+  } else if (key == 'C') {
+    cPressCount++;
+    if (cPressCount >= 2) {
+      mode = MODE_CHANGE;
+      Serial.println("MODE_CHANGE");
+      showChangePasswordStart();
+      cPressCount = 0; 
+    }
+  } else if (key == 'D') {
+    deletePassword();
+    showInputScreen(); 
+  } else if (key == 'B') {
+    lockDoor();
+    showDefaultScreen();
+    ledSuccess();
+  } else if (key == 'A') {
+  } else if (inputIndex < PASSWORD_LENGTH) {
+    addPassword(key); 
+    showInputScreen(); 
+  }
 }
 
 void resetToNormalMode() {
@@ -580,17 +604,18 @@ void deletePassword(){
   }
 }
 
-void addPassword(char key){
-  if(key >= '0' && key <= '9'){
-  inputPassword[inputIndex++] = key;
-  Serial.print("Input: ");
-  for(int i=0; i<inputIndex; i++){
-    Serial.print(inputPassword[i]);
+void addPassword(char key) {
+  if (key >= '0' && key <= '9') { 
+    inputPassword[inputIndex++] = key;
+    Serial.print("Input: ");
+    for (int i = 0; i < inputIndex; i++) {
+      Serial.print(inputPassword[i]);
+    }
+    Serial.println();
   }
-  Serial.println();
-  }
- 
 }
+
+
 
 enum ChangePasswordState {
   ENTER_OLD_PASSWORD,
@@ -634,19 +659,21 @@ void handleOldPassword(char key) {
       Serial.println("Verified success. Enter new password (6 digits):");
       showNewPasswordScreen();
     } else {
-      //soundFailure();
+      soundFailure();
       ledError();
       clearInput();
       Serial.println("Incorrect current password");
       failedAttempts++;
       showWrongPassword();
       delay(2000);
-      showNewPasswordScreen();
+      showOldPasswordScreen();
     }
   } else if (key == 'D') {
     deletePassword();
+    showOldPasswordScreen(); // Cập nhật ngay khi xóa
   } else if (inputIndex < PASSWORD_LENGTH) {
-    addPassword(key);
+    addPassword(key); // Chỉ thêm số
+    showOldPasswordScreen(); // Cập nhật ngay sau khi nhập
   }
 }
 
@@ -663,15 +690,19 @@ void handleNewPassword(char key) {
       Serial.println("Confirm new password:");
       showConfirmPasswordScreen();
     } else {
-      //soundFailure();
+      soundFailure();
       failedAttempts++;
       Serial.println("Password must be 6 digits");
       updateDisplay("MAT KHAU CO 6 KY TU", "");
+      delay(2000);
+      showNewPasswordScreen();
     }
   } else if (key == 'D') {
     deletePassword();
+    showNewPasswordScreen(); // Cập nhật ngay khi xóa
   } else if (inputIndex < PASSWORD_LENGTH) {
-    addPassword(key);
+    addPassword(key); // Chỉ thêm số
+    showNewPasswordScreen(); // Cập nhật ngay sau khi nhập
   }
 }
 
@@ -684,14 +715,14 @@ void handleConfirmPassword(char key) {
     if (strcmp(inputPassword, newPassword) == 0) {
       strcpy(currentPassword, newPassword);
       savePassword();
-      //soundSuccess();
       ledSuccess();
       Serial.println("Password changed successfully");
+      changeState = ENTER_OLD_PASSWORD;
       showChangeSuccess();
       clearInput();
       resetToNormalMode();
     } else {
-      //soundFailure();
+      soundFailure();
       failedAttempts++;
       ledError();
       Serial.println("Passwords do not match");
@@ -702,8 +733,10 @@ void handleConfirmPassword(char key) {
     }
   } else if (key == 'D') {
     deletePassword();
+    showConfirmPasswordScreen(); // Cập nhật ngay khi xóa
   } else if (inputIndex < PASSWORD_LENGTH) {
-    addPassword(key);
+    addPassword(key); // Chỉ thêm số
+    showConfirmPasswordScreen(); // Cập nhật ngay sau khi nhập
   }
 }
 
@@ -793,6 +826,7 @@ void savePassword() {
   }
   EEPROM.commit();
   Serial.println("Password saved to EEPROM");
+  yield();
 }
 
 void soundSuccess() {
