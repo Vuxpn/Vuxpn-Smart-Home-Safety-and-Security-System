@@ -35,4 +35,9 @@ export const MQTT_TOPICS = {
 
   //led Control
   LED_CONTROL: 'iot/control/led',
+
+  //door control
+  UNLOCK_DOOR: 'iot/device/opendoor',
+  LOCK_DOOR: 'iot/device/lockdoor',
+  CHANGE_PASS_DOOR: 'iot/device/changepassword',
 };

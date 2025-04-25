@@ -1,54 +1,34 @@
 import { Module } from '@nestjs/common';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { UsersModule } from 'src/users/users.module';
+import { UsersModule } from '../users/users.module';
 import { JwtModule } from '@nestjs/jwt';
-import { jwtConstants } from './constains';
-import {
-  CacheInterceptor,
-  CacheModule,
-  CacheStore,
-} from '@nestjs/cache-manager';
-import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
-import { redisStore } from 'cache-manager-redis-yet';
-import { AuthGuard } from './auth.guard';
+import { CacheModule } from '@nestjs/cache-manager';
+import { APP_GUARD } from '@nestjs/core';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { JwtStrategy } from './strategies/jwt.strategy';
+import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
+import { PassportModule } from '@nestjs/passport';
+
 @Module({
   imports: [
-    // CacheModule.registerAsync({
-    //   useFactory: async () => {
-    //     const store = await redisStore({
-    //       socket: {
-    //         host: 'localhost',
-    //         port: 6379,
-    //       },
-    //     });
-
-    //     return {
-    //       store: store as unknown as CacheStore,
-    //       ttl: 3 * 60000, // 3 minutes (milliseconds)
-    //     };
-    //   },
-    // }),
-    CacheModule.register(),
-    UsersModule,
-    JwtModule.register({
-      global: true,
-      secret: jwtConstants.secret,
-      signOptions: { expiresIn: '15m' },
+    CacheModule.register({
+      ttl: 24 * 60 * 60 * 1000, // 1 ngày cho danh sách đen
     }),
+    UsersModule,
+    PassportModule,
+    JwtModule.register({}),
   ],
   controllers: [AuthController],
   providers: [
-    AuthGuard,
     AuthService,
-    // {
-    //   provide: APP_INTERCEPTOR,
-    //   useClass: CacheInterceptor,
-    // },
+    JwtStrategy,
+    JwtRefreshStrategy,
     {
       provide: APP_GUARD,
-      useClass: AuthGuard,
+      useClass: JwtAuthGuard,
     },
   ],
+  exports: [AuthService],
 })
 export class AuthModule {}

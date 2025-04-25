@@ -13,11 +13,14 @@ import {
 } from '@nestjs/common';
 import { HomesService } from './homes.service';
 import { CreateHomeDto } from './dto/createHome.dto';
-import { AuthGuard } from '../auth/auth.guard';
 import { AddMemberDto } from './dto/add-member.dto';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Home')
 @Controller('home')
-@UseGuards(AuthGuard)
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth('access-token')
 export class HomesController {
   constructor(private readonly homesService: HomesService) {}
 

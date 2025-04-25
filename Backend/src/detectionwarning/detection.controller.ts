@@ -17,8 +17,13 @@ import { DeviceGuard } from 'src/devices/device.guard';
 import { ChangeModeDto, ChangeTimeDto } from './dto/detection.dto';
 import { Public } from 'src/auth/decorators/public.decorator';
 import { SystemMode } from './dto/detection.dto';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 
+@ApiTags('Detectionwarning')
 @Controller('detectionwarning')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth('access-token')
 export class DetectionWarningController {
   constructor(
     private readonly detectionWarningService: DetectionWarningService,

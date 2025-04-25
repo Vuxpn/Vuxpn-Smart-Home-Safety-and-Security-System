@@ -15,6 +15,7 @@ import { TcpModule } from './tcp/tcp.module';
 import { GasWarningService } from './gaswarning/gasWarning.service';
 import { GasWarningController } from './gaswarning/gasWarning.controller';
 import { GasWarningModule } from './gaswarning/gasWarning.module';
+import { SmartLockModule } from './smartlock/smartLock.module';
 //import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
@@ -40,7 +41,7 @@ import { GasWarningModule } from './gaswarning/gasWarning.module';
     DetectionWarningModule,
     NotificationModule,
     TcpModule,
-    //DashboardModule,
+    SmartLockModule,
   ],
   controllers: [],
   providers: [],

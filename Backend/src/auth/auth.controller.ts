@@ -1,19 +1,12 @@
-import {
-  Body,
-  Headers,
-  Controller,
-  Get,
-  Patch,
-  Post,
-  Request,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Patch, Post, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import RegisterDto from './dto/register.dto';
 import LogInDto from './dto/login.dto';
-import { AuthGuard } from './auth.guard';
 import { ChangePasswordDto } from './dto/changePassword.dto';
 import { Public } from './decorators/public.decorator';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
+import { CurrentUser } from './decorators/current-user.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -31,33 +24,37 @@ export class AuthController {
     return this.authService.login(loginData.email, loginData.password);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post('logout')
-  @UseGuards(AuthGuard)
   async logout(
-    @Headers('authorization') auth: string,
-    @Body() body: { refresh_token: string },
+    @CurrentUser('userId') userId: string,
+    @Body('refresh_token') refreshToken: string,
   ) {
-    const access_token = auth.split(' ')[1];
-    return this.authService.logout(access_token, body.refresh_token);
+    return this.authService.logout(userId, refreshToken);
   }
 
-  @UseGuards(AuthGuard)
-  @Post('profile')
-  async getprofile(@Request() req) {
-    return req.user;
+  @UseGuards(JwtAuthGuard)
+  @Get('profile')
+  async getProfile(@CurrentUser('userId') userId: string) {
+    return this.authService.getProfile(userId);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Patch('change-password')
-  @UseGuards(AuthGuard)
   async changePassword(
-    @Request() req,
+    @CurrentUser('userId') userId: string,
     @Body() changePasswordDto: ChangePasswordDto,
   ) {
-    return this.authService.changePassword(req.user.email, changePasswordDto);
+    return this.authService.changePassword(userId, changePasswordDto);
   }
 
+  @Public()
+  @UseGuards(JwtRefreshGuard)
   @Post('refresh')
-  async refreshToken(@Body('refresh_token') refreshToken: string) {
-    return this.authService.refreshToken(refreshToken);
+  async refreshTokens(
+    @CurrentUser('userId') userId: string,
+    @CurrentUser('refreshToken') refreshToken: string,
+  ) {
+    return this.authService.refreshTokens(userId, refreshToken);
   }
 }

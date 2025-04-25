@@ -20,8 +20,9 @@ import {
 } from '@nestjs/microservices';
 import { MQTT_TOPICS } from 'src/mqtt/mqtt.constants';
 import { privateDecrypt } from 'crypto';
-import { AuthGuard } from 'src/auth/auth.guard';
 import { Public } from 'src/auth/decorators/public.decorator';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 // Định nghĩa interface cho payload
 interface DeviceData {
@@ -29,9 +30,10 @@ interface DeviceData {
   value: number[];
   timestamp: number;
 }
-
+@ApiTags('Devices')
 @Controller('device')
-//@UseGuards(AuthGuard)
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth('access-token')
 export class DevicesController {
   constructor(private readonly devicesService: DevicesService) {}
 

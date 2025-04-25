@@ -1,4 +1,5 @@
 // src/detection/dto/detection.dto.ts
+import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum, IsInt, IsNotEmpty, IsString } from 'class-validator';
 
 export enum SystemMode {
@@ -16,10 +17,12 @@ export class ChangeModeDto {
 }
 
 export class ChangeTimeDto {
+  @ApiProperty()
   @IsString()
   @IsNotEmpty()
   deviceId: string;
 
+  @ApiProperty()
   @IsInt()
   @IsNotEmpty()
   timeout: number;

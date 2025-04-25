@@ -13,8 +13,13 @@ import { WarningControlDto } from './dto/warningControl.dto';
 import { DeviceGuard } from '../devices/device.guard';
 import { DevicesService } from '../devices/devices.service';
 import { WarningValueDto } from './dto/warningValue.dto';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 
-@Controller('device')
+@ApiTags('Gaswarning')
+@Controller('gaswarning')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth('access-token')
 export class GasWarningController {
   constructor(
     @Inject('MQTT_CLIENT') private readonly client: ClientProxy,

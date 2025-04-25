@@ -5,20 +5,22 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { UsersService } from 'src/users/users.service';
+import { UsersService } from '../users/users.service';
 import RegisterDto from './dto/register.dto';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { ChangePasswordDto } from './dto/changePassword.dto';
-import { StringExpressionOperator } from 'mongoose';
 import { ConfigService } from '@nestjs/config';
 import { Cache } from 'cache-manager';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { JwtPayload } from './interfaces/jwt-payload.interface';
+import { Tokens } from './interfaces/token.interface';
+import { jwtConstants } from './constants/jwt.constants';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly userService: UsersService,
+    private readonly usersService: UsersService,
     private jwtService: JwtService,
     private configService: ConfigService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
@@ -27,12 +29,24 @@ export class AuthService {
   async register(registrationData: RegisterDto) {
     const hashedPassword = await bcrypt.hash(registrationData.password, 10);
     try {
-      const createUser = await this.userService.createUser({
+      const createUser = await this.usersService.createUser({
         ...registrationData,
         password: hashedPassword,
       });
-      createUser.password = undefined;
-      return createUser;
+
+      const tokens = await this.generateTokens({
+        sub: createUser._id.toString(),
+        email: createUser.email,
+      });
+
+      return {
+        user: {
+          id: createUser._id,
+          email: createUser.email,
+          name: createUser.name,
+        },
+        ...tokens,
+      };
     } catch (error) {
       if (error?.code === 11000) {
         throw new HttpException('Email đã tồn tại', HttpStatus.BAD_REQUEST);
@@ -46,17 +60,20 @@ export class AuthService {
 
   async login(email: string, password: string) {
     try {
-      const user = await this.userService.getUserByEmail(email);
+      const user = await this.usersService.getUserByEmail(email);
       if (!user) {
         throw new HttpException('User not found', HttpStatus.NOT_FOUND);
       }
 
       await this.verifyPassword(password, user.password);
-      const tokens = await this.generateTokens(user);
+
+      const tokens = await this.generateTokens({
+        sub: user._id.toString(),
+        email: user.email,
+      });
 
       return {
-        access_token: tokens.access_token,
-        refresh_token: tokens.refresh_token,
+        ...tokens,
         user: {
           id: user._id,
           email: user.email,
@@ -68,21 +85,16 @@ export class AuthService {
     }
   }
 
-  private async generateTokens(user: any) {
-    const payload = {
-      email: user.email,
-      sub: user._id,
-    };
-
+  async generateTokens(payload: JwtPayload): Promise<Tokens> {
     const [access_token, refresh_token] = await Promise.all([
-      this.jwtService.signAsync(
-        { ...payload, type: 'access' },
-        { expiresIn: '15m' },
-      ),
-      this.jwtService.signAsync(
-        { ...payload, type: 'refresh' },
-        { expiresIn: '7d' },
-      ),
+      this.jwtService.signAsync(payload, {
+        secret: jwtConstants.accessTokenSecret,
+        expiresIn: jwtConstants.accessTokenExpiration,
+      }),
+      this.jwtService.signAsync(payload, {
+        secret: jwtConstants.refreshTokenSecret,
+        expiresIn: jwtConstants.refreshTokenExpiration,
+      }),
     ]);
 
     return {
@@ -91,79 +103,59 @@ export class AuthService {
     };
   }
 
-  async logout(access_token: string, refresh_token: string) {
+  async logout(userId: string, refreshToken: string) {
     try {
-      const [decodedAccess, decodedRefresh] = await Promise.all([
-        this.jwtService.verifyAsync(access_token),
-        this.jwtService.verifyAsync(refresh_token),
-      ]);
+      // Thêm cả access token và refresh token vào danh sách đen
+      await this.cacheManager.set(
+        `bl_${userId}`,
+        'true',
+        parseInt(jwtConstants.accessTokenExpiration) * 1000,
+      );
 
-      const now = Math.floor(Date.now() / 1000);
-      await Promise.all([
-        this.cacheManager.set(
-          `bl_${access_token}`,
-          'true',
-          (decodedAccess.exp - now) * 1000,
-        ),
-        this.cacheManager.set(
-          `bl_${refresh_token}`,
-          'true',
-          (decodedRefresh.exp - now) * 1000,
-        ),
-      ]);
+      await this.cacheManager.set(
+        `bl_${refreshToken}`,
+        'true',
+        parseInt(jwtConstants.refreshTokenExpiration) * 1000,
+      );
 
-      return { message: 'Logged out successfully' };
+      return { message: 'Đăng xuất thành công' };
     } catch (error) {
       throw new HttpException(
-        'Error during logout',
+        'Lỗi khi đăng xuất',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
 
-  async verifyToken(token: string) {
-    {
-      try {
-        const isBlacklisted = await this.cacheManager.get(`bl_${token}`);
-        if (isBlacklisted) {
-          throw new UnauthorizedException('Token has been revoked');
-        }
-        const payload = await this.jwtService.verifyAsync(token);
-        return payload;
-      } catch (error) {
-        throw new UnauthorizedException('Invalid token');
-      }
-    }
-  }
-
-  async refreshToken(refreshToken: string) {
+  async refreshTokens(userId: string, refreshToken: string): Promise<Tokens> {
     try {
-      const payload = await this.verifyToken(refreshToken);
-      // Kiểm tra xem token có phải là token refresh không
-      if (payload.type !== 'refresh') {
-        throw new HttpException('Invalid token', HttpStatus.UNAUTHORIZED);
-      }
-      const user = await this.userService.getUserByEmail(payload.email);
+      const user = await this.usersService.getUserById(userId);
       if (!user) {
         throw new UnauthorizedException('User not found');
       }
-      const newPayload = {
-        email: payload.email,
-        sub: payload.sub,
-        type: 'access',
-      };
-      const newAccessToken = await this.jwtService.signAsync(payload, {
-        expiresIn: '15m',
+
+      // Tạo token mới
+      const tokens = await this.generateTokens({
+        sub: userId,
+        email: user.email,
       });
-      return { access_token: newAccessToken };
+
+      // Thêm token cũ vào danh sách đen
+      await this.cacheManager.set(
+        `bl_${refreshToken}`,
+        'true',
+        parseInt(jwtConstants.refreshTokenExpiration) * 1000,
+      );
+
+      return tokens;
     } catch (error) {
-      throw new HttpException('Invalid token', HttpStatus.UNAUTHORIZED);
+      throw new UnauthorizedException('Invalid refresh token');
     }
   }
 
-  async changePassword(email: string, changePasswordDto: ChangePasswordDto) {
+  async changePassword(userId: string, changePasswordDto: ChangePasswordDto) {
     try {
-      const user = await this.userService.getUserByEmail(email);
+      const user = await this.usersService.getUserById(userId);
       if (!user) {
         throw new HttpException('User not found', HttpStatus.NOT_FOUND);
       }
@@ -178,7 +170,7 @@ export class AuthService {
       );
       if (isSamePassword) {
         throw new HttpException(
-          'New password must be different from old password',
+          'Mật khẩu mới phải khác mật khẩu cũ',
           HttpStatus.BAD_REQUEST,
         );
       }
@@ -190,10 +182,17 @@ export class AuthService {
       );
 
       // Update password in database
-      await this.userService.updateUserPassword(email, hashedNewPassword);
+      await this.usersService.updateUserPassword(user.email, hashedNewPassword);
+
+      // Đánh dấu tất cả token hiện tại là không hợp lệ
+      await this.cacheManager.set(
+        `bl_${userId}`,
+        'true',
+        parseInt(jwtConstants.accessTokenExpiration) * 1000,
+      );
 
       return {
-        message: 'Password changed successfully',
+        message: 'Thay đổi mật khẩu thành công',
         timestamp: new Date().toISOString(),
       };
     } catch (error) {
@@ -201,7 +200,7 @@ export class AuthService {
         throw error;
       }
       throw new HttpException(
-        'Failed to change password',
+        'Không thể thay đổi mật khẩu',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -211,16 +210,13 @@ export class AuthService {
     plainTextPassword: string,
     hashedPassword: string,
   ) {
-    // Kiểm tra giá trị của hashedPassword
-    console.log('plainTextPassword:', plainTextPassword);
-    console.log('hashedPassword:', hashedPassword);
     const isPasswordMatching = await bcrypt.compare(
       plainTextPassword,
       hashedPassword,
     );
     if (!isPasswordMatching) {
       throw new HttpException(
-        'Wrong credentials provided',
+        'Thông tin đăng nhập không chính xác',
         HttpStatus.BAD_REQUEST,
       );
     }
@@ -228,7 +224,7 @@ export class AuthService {
 
   async getProfile(userId: string) {
     try {
-      const user = await this.userService.getUserById(userId);
+      const user = await this.usersService.getUserById(userId);
       if (!user) {
         throw new HttpException('User not found', HttpStatus.NOT_FOUND);
       }
