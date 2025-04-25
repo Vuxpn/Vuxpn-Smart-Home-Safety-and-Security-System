@@ -16,6 +16,7 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 import { Tokens } from './interfaces/token.interface';
 import { jwtConstants } from './constants/jwt.constants';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class AuthService {
@@ -104,27 +105,18 @@ export class AuthService {
   }
 
   async logout(userId: string, refreshToken: string) {
-    try {
-      // Thêm cả access token và refresh token vào danh sách đen
-      await this.cacheManager.set(
-        `bl_${userId}`,
-        'true',
-        parseInt(jwtConstants.accessTokenExpiration) * 1000,
-      );
+    // Lưu thông tin chi tiết hơn
+    const tokenHash = crypto
+      .createHash('sha256')
+      .update(refreshToken)
+      .digest('hex');
 
-      await this.cacheManager.set(
-        `bl_${refreshToken}`,
-        'true',
-        parseInt(jwtConstants.refreshTokenExpiration) * 1000,
-      );
-
-      return { message: 'Đăng xuất thành công' };
-    } catch (error) {
-      throw new HttpException(
-        'Lỗi khi đăng xuất',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+    await this.cacheManager.set(
+      `bl_token_${tokenHash}`,
+      'true',
+      parseInt(jwtConstants.refreshTokenExpiration) * 1000,
+    );
+    return { message: 'Đăng xuất thành công' };
   }
 
   async refreshTokens(userId: string, refreshToken: string): Promise<Tokens> {

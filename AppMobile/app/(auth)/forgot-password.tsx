@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
 import SafeAreaWrapper from '../../components/layout/SafeAreaWrapper';
+import { Icons } from '@/constants/icons';
 
 export default function ForgotPasswordScreen() {
     const [email, setEmail] = useState('');
@@ -43,20 +44,16 @@ export default function ForgotPasswordScreen() {
 
     return (
         <SafeAreaWrapper>
-            <View className="flex-1 justify-center">
+            <View className="flex-1 px-6 py-6">
                 <TouchableOpacity onPress={() => router.back()} className="absolute top-6 left-2">
-                    <Text className="text-blue-500 text-base">Quay lại</Text>
+                    <Text className="text-primary underline">Quay lại</Text>
                 </TouchableOpacity>
 
                 <View className="items-center mb-8">
-                    <Image
-                        source={require('../../assets/images/logo.png')}
-                        style={{ width: 80, height: 80, marginBottom: 8 }}
-                    />
-                    <Text className="text-2xl font-bold">Quên mật khẩu</Text>
-                    <Text className="text-gray-500 mt-1 text-center px-6">
-                        Nhập email của bạn và chúng tôi sẽ gửi hướng dẫn để đặt lại mật khẩu
-                    </Text>
+                    <View className="items-center mt-10 mb-10">
+                        <Image source={Icons.logo} className="w-20 h-20 mb-3" resizeMode="contain" />
+                        <Text className="text-2xl font-bold text-black">SnSHome</Text>
+                    </View>
                 </View>
 
                 {isSent ? (

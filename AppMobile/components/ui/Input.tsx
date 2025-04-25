@@ -9,6 +9,7 @@ interface InputProps {
     secureTextEntry?: boolean;
     keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad';
     error?: string;
+    className?: string;
 }
 
 const Input = ({

@@ -10,10 +10,10 @@ export default function LoginScreen() {
         <SafeAreaWrapper>
             <View className="flex-1 px-6 py-6">
                 {/* Header: Logo + App Name */}
-                {/* <View className="items-center mt-10 mb-10">
+                <View className="items-center mt-10 mb-10">
                     <Image source={Icons.logo} className="w-20 h-20 mb-3" resizeMode="contain" />
                     <Text className="text-2xl font-bold text-black">SnSHome</Text>
-                </View> */}
+                </View>
 
                 {/* Login form */}
                 <View className="flex-none mt-10">

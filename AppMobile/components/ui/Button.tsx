@@ -8,6 +8,7 @@ interface ButtonProps {
     variant?: 'primary' | 'secondary' | 'outline' | 'danger';
     disabled?: boolean;
     className?: string;
+    leftIcon?: React.ReactNode;
 }
 
 const Button = ({

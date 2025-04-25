@@ -26,17 +26,17 @@ export class HomesController {
 
   @Get()
   async getAllHomes(@Request() req) {
-    return await this.homesService.getAllHomes(req.user.sub);
+    return await this.homesService.getAllHomes(req.user.userId);
   }
 
   @Get(':id')
   async getHomeById(@Param('id') id: string, @Request() req) {
-    return await this.homesService.getHomeById(id, req.user.sub);
+    return await this.homesService.getHomeById(id, req.user.userId);
   }
 
   @Post('create')
   async createHome(@Body() createHomeDto: CreateHomeDto, @Request() req) {
-    return await this.homesService.createHome(createHomeDto, req.user.sub);
+    return await this.homesService.createHome(createHomeDto, req.user.userId);
   }
 
   @Put('update/:id')
@@ -45,12 +45,16 @@ export class HomesController {
     @Body() updateHomeDto: CreateHomeDto,
     @Request() req,
   ) {
-    return await this.homesService.updateHome(id, updateHomeDto, req.user.sub);
+    return await this.homesService.updateHome(
+      id,
+      updateHomeDto,
+      req.user.userId,
+    );
   }
 
   @Delete('delete/:id')
   async deleteHome(@Param('id') id: string, @Request() req) {
-    return await this.homesService.deleteHome(id, req.user.sub);
+    return await this.homesService.deleteHome(id, req.user.userId);
   }
 
   @Delete(':id/members/:memberId')
@@ -59,7 +63,11 @@ export class HomesController {
     @Param('memberId') memberId: string,
     @Request() req,
   ) {
-    return await this.homesService.removeMember(homeId, memberId, req.user.sub);
+    return await this.homesService.removeMember(
+      homeId,
+      memberId,
+      req.user.userId,
+    );
   }
 
   @Post(':id/members')
@@ -71,7 +79,7 @@ export class HomesController {
     return await this.homesService.addMemberByEmail(
       homeId,
       addMemberDto.email,
-      req.user.sub,
+      req.user.userId,
     );
   }
 }

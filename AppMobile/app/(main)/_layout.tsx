@@ -16,7 +16,7 @@ export default function MainLayout() {
     return (
         <Tabs
             screenOptions={{
-                tabBarActiveTintColor: '#3498db',
+                tabBarActiveTintColor: '#ef4444',
                 tabBarInactiveTintColor: '#95a5a6',
                 tabBarStyle: {
                     backgroundColor: '#fff',
@@ -36,7 +36,7 @@ export default function MainLayout() {
             }}
         >
             <Tabs.Screen
-                name="home/index"
+                name="home"
                 options={{
                     title: 'Trang chủ',
                     tabBarIcon: ({ color, size }) => <MaterialIcons name="home" size={size} color={color} />,
