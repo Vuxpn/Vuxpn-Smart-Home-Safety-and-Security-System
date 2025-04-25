@@ -1,0 +1,97 @@
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, Image } from 'react-native';
+import { router } from 'expo-router';
+import Input from '../../components/ui/Input';
+import Button from '../../components/ui/Button';
+import SafeAreaWrapper from '../../components/layout/SafeAreaWrapper';
+
+export default function ForgotPasswordScreen() {
+    const [email, setEmail] = useState('');
+    const [emailError, setEmailError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [isSent, setIsSent] = useState(false);
+
+    const validateEmail = () => {
+        if (!email.trim()) {
+            setEmailError('Email không được để trống');
+            return false;
+        } else if (!/^\S+@\S+\.\S+$/.test(email)) {
+            setEmailError('Email không hợp lệ');
+            return false;
+        }
+        setEmailError('');
+        return true;
+    };
+
+    const handleSubmit = () => {
+        if (validateEmail()) {
+            setIsLoading(true);
+
+            // Mô phỏng gửi yêu cầu API
+            setTimeout(() => {
+                setIsLoading(false);
+                setIsSent(true);
+            }, 1500);
+
+            // Gọi API khi sẵn sàng:
+            // authService.forgotPassword(email)
+            //   .then(() => setIsSent(true))
+            //   .catch(err => console.error(err))
+            //   .finally(() => setIsLoading(false));
+        }
+    };
+
+    return (
+        <SafeAreaWrapper>
+            <View className="flex-1 justify-center">
+                <TouchableOpacity onPress={() => router.back()} className="absolute top-6 left-2">
+                    <Text className="text-blue-500 text-base">Quay lại</Text>
+                </TouchableOpacity>
+
+                <View className="items-center mb-8">
+                    <Image
+                        source={require('../../assets/images/logo.png')}
+                        style={{ width: 80, height: 80, marginBottom: 8 }}
+                    />
+                    <Text className="text-2xl font-bold">Quên mật khẩu</Text>
+                    <Text className="text-gray-500 mt-1 text-center px-6">
+                        Nhập email của bạn và chúng tôi sẽ gửi hướng dẫn để đặt lại mật khẩu
+                    </Text>
+                </View>
+
+                {isSent ? (
+                    <View className="bg-green-100 p-4 rounded-xl mb-4">
+                        <Text className="text-green-700 text-center">
+                            Hướng dẫn đặt lại mật khẩu đã được gửi đến email của bạn
+                        </Text>
+                    </View>
+                ) : (
+                    <>
+                        <Input
+                            label="Email"
+                            value={email}
+                            onChangeText={(text) => {
+                                setEmail(text);
+                                setEmailError('');
+                            }}
+                            placeholder="Nhập email của bạn"
+                            keyboardType="email-address"
+                            error={emailError}
+                        />
+
+                        <Button title="Gửi yêu cầu" onPress={handleSubmit} isLoading={isLoading} className="mt-4" />
+                    </>
+                )}
+
+                {isSent && (
+                    <Button
+                        title="Quay lại đăng nhập"
+                        onPress={() => router.push('/(auth)/login')}
+                        variant="outline"
+                        className="mt-4"
+                    />
+                )}
+            </View>
+        </SafeAreaWrapper>
+    );
+}
