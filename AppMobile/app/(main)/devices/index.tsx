@@ -32,7 +32,6 @@ export default function DevicesScreen() {
 
     const handleSelectHome = (home: { _id: string; name: string }) => {
         setCurrentHome(home);
-        // Khi chọn nhà mới, tự động fetch lại danh sách thiết bị
         getDevices(home._id);
         showToast('info', 'Đã chuyển nhà', `Đã chuyển sang nhà ${home.name}`);
     };
@@ -92,7 +91,7 @@ export default function DevicesScreen() {
                     <DeviceList
                         devices={devices.filter((device) => device.homeId === currentHome._id)}
                         isLoading={isLoading}
-                        onRefresh={getDevices}
+                        onRefresh={loadDevices}
                         onAddDevice={() => router.push('/devices/add-device')}
                     />
                 </View>
