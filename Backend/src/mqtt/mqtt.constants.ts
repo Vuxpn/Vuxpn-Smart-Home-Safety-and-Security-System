@@ -40,4 +40,9 @@ export const MQTT_TOPICS = {
   UNLOCK_DOOR: 'iot/device/opendoor',
   LOCK_DOOR: 'iot/device/lockdoor',
   CHANGE_PASS_DOOR: 'iot/device/changepassword',
+  LOCK_STATUS: 'iot/device/+/status',
+  DOOR_LOG: 'iot/device/+/log',
+  UNLOCK_DOOR_STATUS: 'iot/device/+/opendoor/status',
+  LOCK_DOOR_STATUS: 'iot/device/+/lockdoor/status',
+  CHANGE_PASS_STATUS: 'iot/device/+/changepass/status',
 };

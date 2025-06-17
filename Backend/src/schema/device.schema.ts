@@ -24,7 +24,13 @@ export class Device {
 
   @Prop({
     required: true,
-    enum: ['Light', 'Atmosphere Sensor', 'Security Camera', 'Other'],
+    enum: [
+      'Light',
+      'Atmosphere Sensor',
+      'Security Camera',
+      'SmartLock',
+      'Other',
+    ],
   })
   type: string;
 }

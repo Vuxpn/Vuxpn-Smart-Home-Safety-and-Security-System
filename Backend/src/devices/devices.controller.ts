@@ -8,6 +8,7 @@ import {
   Req,
   Patch,
   InternalServerErrorException,
+  Delete,
 } from '@nestjs/common';
 import { DevicesService } from './devices.service';
 import { CreateDeviceDto, UpdateDeviceDto } from './dto/createDevice.dto';
@@ -112,7 +113,7 @@ export class DevicesController {
     this.devicesService.handleDisconnectResponse(deviceId, data.disconnected);
   }
   @Public()
-  @Post('delete/:deviceId')
+  @Delete('delete/:deviceId')
   async deleteDevice(@Param('deviceId') deviceId: string) {
     return this.devicesService.deleteDevice(deviceId);
   }

@@ -14,6 +14,8 @@ export default function useHouse() {
         createHome,
         updateHome,
         deleteHome,
+        addMemberByEmail,
+        removeMember,
         setCurrentHome,
     } = useHomeStore();
 
@@ -39,6 +41,8 @@ export default function useHouse() {
         createHome,
         updateHome,
         deleteHome,
+        addMemberByEmail,
+        removeMember,
         setCurrentHome,
     };
 }

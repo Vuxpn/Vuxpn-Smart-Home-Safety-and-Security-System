@@ -43,14 +43,14 @@ export default function MainLayout() {
                 }}
             />
             <Tabs.Screen
-                name="devices/index"
+                name="devices"
                 options={{
                     title: 'Thiết bị',
                     tabBarIcon: ({ color, size }) => <MaterialIcons name="devices" size={size} color={color} />,
                 }}
             />
             <Tabs.Screen
-                name="profile/index"
+                name="profile"
                 options={{
                     title: 'Tài khoản',
                     tabBarIcon: ({ color, size }) => <MaterialIcons name="person" size={size} color={color} />,

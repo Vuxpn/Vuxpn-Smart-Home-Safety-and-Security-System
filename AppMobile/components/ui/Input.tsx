@@ -10,6 +10,7 @@ interface InputProps {
     keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad';
     error?: string;
     className?: string;
+    editable?: boolean;
 }
 
 const Input = ({

@@ -49,7 +49,7 @@ const char *ssid = "Vuxpn";
 const char *password = "12345678";
 
 // MQTT Broker
-const char *mqtt_broker = "e6b1298d0857429c89f18a2890b4f84c.s1.eu.hivemq.cloud";
+const char *mqtt_broker = "l652a6f1.ala.asia-southeast1.emqxsl.com";
 const char *mqtt_username = "vuphan";
 const char *mqtt_password = "Vu15102003@";
 const int mqtt_port = 8883;

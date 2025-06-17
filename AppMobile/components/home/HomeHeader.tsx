@@ -1,8 +1,9 @@
-// AppMobile/components/home/HomeHeader.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Pressable, Modal, FlatList, StyleSheet } from 'react-native';
 import { MaterialIcons, Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import socketService from '../../services/socketService';
+import { green } from 'react-native-reanimated/lib/typescript/Colors';
 
 interface Home {
     _id: string;
@@ -14,16 +15,62 @@ interface HomeHeaderProps {
     currentHome: Home | null;
     homes: Home[];
     onSelectHome: (home: Home) => void;
+    sensorDeviceId?: string; // ID của thiết bị cảm biến để theo dõi
 }
 
-const HomeHeader: React.FC<HomeHeaderProps> = ({ currentHome, homes, onSelectHome }) => {
+const HomeHeader: React.FC<HomeHeaderProps> = ({ currentHome, homes, onSelectHome, sensorDeviceId }) => {
     const [showHouseMenu, setShowHouseMenu] = useState(false);
     const [showOptionsMenu, setShowOptionsMenu] = useState(false);
+    const [sensorData, setSensorData] = useState({
+        temperature: 0,
+        humidity: 0,
+        gasLevel: 0,
+    });
 
-    // Giá trị mặc định cho thông tin môi trường
-    const temperature = '27°C';
-    const humidity = '84%';
-    const gasLevel = 'An toàn';
+    useEffect(() => {
+        if (sensorDeviceId) {
+            //console.log(`HomeHeader subscribing to device ${sensorDeviceId}`);
+            socketService.subscribeToDevice(sensorDeviceId);
+
+            // Thêm listener để nhận dữ liệu
+            const handleSensorData = (data: { type: string; value: number; timestamp: string }) => {
+                //console.log(`HomeHeader received data: ${JSON.stringify(data)}`);
+                if (data.type === 'gasLevel') {
+                    setSensorData((prev) => ({ ...prev, gasLevel: data.value }));
+                } else if (data.type === 'temperature') {
+                    setSensorData((prev) => ({ ...prev, temperature: data.value }));
+                } else if (data.type === 'humidity') {
+                    setSensorData((prev) => ({ ...prev, humidity: data.value }));
+                }
+            };
+
+            socketService.addSensorDataListener(sensorDeviceId, handleSensorData);
+
+            // Cập nhật giá trị từ service mỗi lần component render lại
+            const currentValues = socketService.getSensorValues();
+            console.log(`HomeHeader currentValues: ${JSON.stringify(currentValues)}`);
+            setSensorData({
+                temperature: currentValues.temperature,
+                humidity: currentValues.humidity,
+                gasLevel: currentValues.gasLevel,
+            });
+
+            return () => {
+                console.log(`HomeHeader unsubscribing from device ${sensorDeviceId}`);
+                socketService.removeSensorDataListener(sensorDeviceId, handleSensorData);
+            };
+        }
+    }, [sensorDeviceId]);
+
+    // Xác định trạng thái khí gas
+    const getGasStatus = () => {
+        const gasLevel = sensorData.gasLevel;
+        if (gasLevel < 70) return { text: 'An toàn', color: 'green' };
+        if (gasLevel >= 70 && gasLevel < 80) return { text: 'Cảnh báo', color: 'orange' };
+        return { text: 'Nguy hiểm', color: 'red' };
+    };
+
+    const gasStatus = getGasStatus();
 
     return (
         <View className="mb-5">
@@ -36,7 +83,13 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ currentHome, homes, onSelectHom
 
                 <View className="flex-row">
                     {/* Nút thông báo */}
-                    <Pressable className="w-10 h-10 rounded-full bg-gray-100 items-center justify-center mr-2">
+                    <Pressable
+                        onPress={() => {
+                            setShowOptionsMenu(false);
+                            router.push('/home/notification');
+                        }}
+                        className="w-10 h-10 rounded-full bg-gray-100 items-center justify-center mr-2"
+                    >
                         <Ionicons name="notifications-outline" size={22} color="black" />
                         <View className="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full"></View>
                     </Pressable>
@@ -62,19 +115,19 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ currentHome, homes, onSelectHom
                 {/* Nhiệt độ */}
                 <View className="flex-row items-center mr-4 my-1">
                     <Feather name="thermometer" size={16} color="orange" />
-                    <Text className="text-gray-500 ml-1">{temperature}</Text>
+                    <Text className="text-gray-500 ml-1">{sensorData.temperature.toFixed(1)}°C</Text>
                 </View>
 
                 {/* Độ ẩm */}
                 <View className="flex-row items-center mr-4 my-1">
                     <Feather name="droplet" size={16} color="blue" />
-                    <Text className="text-gray-500 ml-1">{humidity}</Text>
+                    <Text className="text-gray-500 ml-1">{sensorData.humidity.toFixed(1)}%</Text>
                 </View>
 
                 {/* Khí gas */}
                 <View className="flex-row items-center my-1">
-                    <MaterialCommunityIcons name="gas-cylinder" size={16} color="green" />
-                    <Text className="text-gray-500 ml-1">{gasLevel}</Text>
+                    <MaterialCommunityIcons name="gas-cylinder" size={16} color={gasStatus.color} />
+                    <Text style={{ color: gasStatus.color, marginLeft: 4 }}>{gasStatus.text}</Text>
                 </View>
             </View>
 
@@ -149,7 +202,7 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ currentHome, homes, onSelectHom
                             style={styles.optionItem}
                             onPress={() => {
                                 setShowOptionsMenu(false);
-                                // router.push('/home/add-device');
+                                router.push('/devices/add-device');
                             }}
                         >
                             <Ionicons name="add-circle-outline" size={20} color="black" />
@@ -160,7 +213,7 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ currentHome, homes, onSelectHom
                             style={styles.optionItem}
                             onPress={() => {
                                 setShowOptionsMenu(false);
-                                //router.push('/home/members');
+                                router.push('/home/members');
                             }}
                         >
                             <Ionicons name="people-outline" size={20} color="black" />

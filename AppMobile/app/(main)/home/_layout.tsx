@@ -23,6 +23,20 @@ export default function HomeLayout() {
                     presentation: 'modal',
                 }}
             />
+            <Stack.Screen
+                name="members"
+                options={{
+                    headerShown: false,
+                    presentation: 'modal',
+                }}
+            />
+            <Stack.Screen
+                name="notification"
+                options={{
+                    headerShown: false,
+                    presentation: 'modal',
+                }}
+            />
         </Stack>
     );
 }

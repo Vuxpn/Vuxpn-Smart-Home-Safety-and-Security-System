@@ -1,17 +1,42 @@
 // AppMobile/app/(main)/home/index.tsx
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Image, StyleSheet } from 'react-native';
 import SafeAreaWrapper from '../../../components/layout/SafeAreaWrapper';
 import HomeHeader from '../../../components/home/HomeHeader';
 import useHouse from '../../../hook/useHouse';
 import { ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import socketService from '../../../services/socketService';
+import useDeviceStore from '../../../store/deviceStore';
 
 export default function HomeScreen() {
     const { homes, currentHome, isLoading, loadHomes, setCurrentHome } = useHouse();
+    const { devices } = useDeviceStore();
+    const [sensorDeviceId, setSensorDeviceId] = useState<string | undefined>(undefined);
 
     useEffect(() => {
         loadHomes();
+    }, []);
+
+    useEffect(() => {
+        if (devices && devices.length > 0) {
+            const sensorDevice = devices.find(
+                (device) => device.type === 'Atmosphere Sensor' && device.state === 'ACTIVE',
+            );
+
+            if (sensorDevice) {
+                console.log(`Found sensor device: ${sensorDevice.deviceId}`);
+                setSensorDeviceId(sensorDevice.deviceId);
+            }
+        }
+    }, [devices]);
+
+    useEffect(() => {
+        return () => {
+            if (sensorDeviceId) {
+                socketService.unsubscribeFromDevice(sensorDeviceId);
+            }
+        };
     }, []);
 
     if (isLoading && homes.length === 0) {
@@ -37,7 +62,12 @@ export default function HomeScreen() {
             <SafeAreaWrapper backgroundColor="transparent">
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
                     {/* Header với thông tin nhà */}
-                    <HomeHeader currentHome={currentHome} homes={homes} onSelectHome={setCurrentHome} />
+                    <HomeHeader
+                        currentHome={currentHome}
+                        homes={homes}
+                        onSelectHome={setCurrentHome}
+                        sensorDeviceId={sensorDeviceId}
+                    />
 
                     {/* Phần còn lại của màn hình Home */}
                     <View>

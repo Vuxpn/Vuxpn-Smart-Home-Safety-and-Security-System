@@ -5,6 +5,8 @@ interface Home {
     _id: string;
     name: string;
     address: string;
+    members?: any[];
+    owner?: any;
 }
 
 interface HomeState {
@@ -18,6 +20,8 @@ interface HomeState {
     createHome: (homeData: any) => Promise<void>;
     updateHome: (homeId: string, homeData: any) => Promise<void>;
     deleteHome: (homeId: string) => Promise<void>;
+    addMemberByEmail: (homeId: string, email: string) => Promise<void>;
+    removeMember: (homeId: string, memberId: string) => Promise<void>;
     setCurrentHome: (home: Home) => void;
     clearError: () => void;
 }
@@ -114,6 +118,50 @@ const useHomeStore = create<HomeState>((set, get) => ({
             set({
                 isLoading: false,
                 error: error.response?.data?.message || 'Không thể xóa nhà',
+            });
+            throw error;
+        }
+    },
+
+    addMemberByEmail: async (homeId: string, email: string) => {
+        try {
+            set({ isLoading: true, error: null });
+            const updatedHome = await houseService.addMember(homeId, email);
+
+            // Cập nhật danh sách nhà và nhà hiện tại với thành viên mới
+            const homes = get().homes.map((home) => (home._id === homeId ? updatedHome : home));
+
+            set({
+                homes,
+                currentHome: get().currentHome?._id === homeId ? updatedHome : get().currentHome,
+                isLoading: false,
+            });
+        } catch (error: any) {
+            set({
+                isLoading: false,
+                error: error.response?.data?.message || 'Không thể thêm thành viên',
+            });
+            throw error;
+        }
+    },
+
+    removeMember: async (homeId: string, memberId: string) => {
+        try {
+            set({ isLoading: true, error: null });
+            const updatedHome = await houseService.removeMember(homeId, memberId);
+
+            // Cập nhật danh sách nhà và nhà hiện tại sau khi xóa thành viên
+            const homes = get().homes.map((home) => (home._id === homeId ? updatedHome : home));
+
+            set({
+                homes,
+                currentHome: get().currentHome?._id === homeId ? updatedHome : get().currentHome,
+                isLoading: false,
+            });
+        } catch (error: any) {
+            set({
+                isLoading: false,
+                error: error.response?.data?.message || 'Không thể xóa thành viên',
             });
             throw error;
         }

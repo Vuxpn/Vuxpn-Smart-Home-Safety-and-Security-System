@@ -98,95 +98,95 @@ export class GasWarningController {
     });
   }
 
-  @Post(':deviceId/ledBedOn')
-  async turnOnBedLed(@Param('deviceId') deviceId: string) {
-    try {
-      const result = await this.gasWarningService.ledControl({
-        deviceId,
-        state: 'ledBedOn',
-      });
-      console.log('Turn on bed led', result);
-      return result;
-    } catch (error) {
-      console.error('Error turn on bed led:', error);
-      throw error;
-    }
-  }
+  // @Post(':deviceId/ledBedOn')
+  // async turnOnBedLed(@Param('deviceId') deviceId: string) {
+  //   try {
+  //     const result = await this.gasWarningService.ledControl({
+  //       deviceId,
+  //       state: 'ledBedOn',
+  //     });
+  //     console.log('Turn on bed led', result);
+  //     return result;
+  //   } catch (error) {
+  //     console.error('Error turn on bed led:', error);
+  //     throw error;
+  //   }
+  // }
 
-  @Post(':deviceId/ledBedOff')
-  async turnOffBedLed(@Param('deviceId') deviceId: string) {
-    try {
-      const result = await this.gasWarningService.ledControl({
-        deviceId,
-        state: 'ledBedOff',
-      });
-      console.log('Turn off bed led', result);
-      return result;
-    } catch (error) {
-      console.error('Error turn off bed led:', error);
-      throw error;
-    }
-  }
+  // @Post(':deviceId/ledBedOff')
+  // async turnOffBedLed(@Param('deviceId') deviceId: string) {
+  //   try {
+  //     const result = await this.gasWarningService.ledControl({
+  //       deviceId,
+  //       state: 'ledBedOff',
+  //     });
+  //     console.log('Turn off bed led', result);
+  //     return result;
+  //   } catch (error) {
+  //     console.error('Error turn off bed led:', error);
+  //     throw error;
+  //   }
+  // }
 
-  @Post(':deviceId/ledLivOn')
-  async turnOnLivLed(@Param('deviceId') deviceId: string) {
-    try {
-      const result = await this.gasWarningService.ledControl({
-        deviceId,
-        state: 'ledLivOn',
-      });
-      console.log('Turn on liv led', result);
-      return result;
-    } catch (error) {
-      console.error('Error turn on liv led:', error);
-      throw error;
-    }
-  }
+  // @Post(':deviceId/ledLivOn')
+  // async turnOnLivLed(@Param('deviceId') deviceId: string) {
+  //   try {
+  //     const result = await this.gasWarningService.ledControl({
+  //       deviceId,
+  //       state: 'ledLivOn',
+  //     });
+  //     console.log('Turn on liv led', result);
+  //     return result;
+  //   } catch (error) {
+  //     console.error('Error turn on liv led:', error);
+  //     throw error;
+  //   }
+  // }
 
-  @Post(':deviceId/ledLivOff')
-  async turnOffLivLed(@Param('deviceId') deviceId: string) {
-    try {
-      const result = await this.gasWarningService.ledControl({
-        deviceId,
-        state: 'ledLivOff',
-      });
-      console.log('Turn off liv led', result);
-      return result;
-    } catch (error) {
-      console.error('Error turn off liv led:', error);
-      throw error;
-    }
-  }
+  // @Post(':deviceId/ledLivOff')
+  // async turnOffLivLed(@Param('deviceId') deviceId: string) {
+  //   try {
+  //     const result = await this.gasWarningService.ledControl({
+  //       deviceId,
+  //       state: 'ledLivOff',
+  //     });
+  //     console.log('Turn off liv led', result);
+  //     return result;
+  //   } catch (error) {
+  //     console.error('Error turn off liv led:', error);
+  //     throw error;
+  //   }
+  // }
 
-  @Post(':deviceId/ledKitOn')
-  async turnOnKitLed(@Param('deviceId') deviceId: string) {
-    try {
-      const result = await this.gasWarningService.ledControl({
-        deviceId,
-        state: 'ledKitOn',
-      });
-      console.log('Turn on kit led', result);
-      return result;
-    } catch (error) {
-      console.error('Error turn on kit led:', error);
-      throw error;
-    }
-  }
+  // @Post(':deviceId/ledKitOn')
+  // async turnOnKitLed(@Param('deviceId') deviceId: string) {
+  //   try {
+  //     const result = await this.gasWarningService.ledControl({
+  //       deviceId,
+  //       state: 'ledKitOn',
+  //     });
+  //     console.log('Turn on kit led', result);
+  //     return result;
+  //   } catch (error) {
+  //     console.error('Error turn on kit led:', error);
+  //     throw error;
+  //   }
+  // }
 
-  @Post(':deviceId/ledKitOff')
-  async turnOffKitLed(@Param('deviceId') deviceId: string) {
-    try {
-      const result = await this.gasWarningService.ledControl({
-        deviceId,
-        state: 'ledKitOff',
-      });
-      console.log('Turn off kit led', result);
-      return result;
-    } catch (error) {
-      console.error('Error turn off kit led:', error);
-      throw error;
-    }
-  }
+  // @Post(':deviceId/ledKitOff')
+  // async turnOffKitLed(@Param('deviceId') deviceId: string) {
+  //   try {
+  //     const result = await this.gasWarningService.ledControl({
+  //       deviceId,
+  //       state: 'ledKitOff',
+  //     });
+  //     console.log('Turn off kit led', result);
+  //     return result;
+  //   } catch (error) {
+  //     console.error('Error turn off kit led:', error);
+  //     throw error;
+  //   }
+  // }
 
   @MessagePattern(MQTT_TOPICS.TEMPERATURE + '/+')
   async getNotificationsTemperature(

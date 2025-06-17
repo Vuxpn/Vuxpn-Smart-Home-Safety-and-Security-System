@@ -1,9 +1,9 @@
-import React, { ReactNode } from 'react';
+import * as React from 'react';
 import { View, Text, Pressable } from 'react-native';
 
 interface CardProps {
     title?: string;
-    children: ReactNode;
+    children: React.ReactNode;
     onPress?: () => void;
     className?: string;
 }
