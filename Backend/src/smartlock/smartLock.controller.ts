@@ -73,7 +73,6 @@ export class SmartLockController {
     return this.smartLockService.getDoorLogs(deviceId, limit || 10);
   }
 
-  // Xử lý thông tin trạng thái từ thiết bị
   @MessagePattern(MQTT_TOPICS.LOCK_STATUS)
   async handleLockStatus(@Payload() data: any, @Ctx() context: MqttContext) {
     const topic = context.getTopic();
@@ -81,7 +80,6 @@ export class SmartLockController {
     return this.smartLockService.processLockStatus(deviceId, data);
   }
 
-  // Xử lý thông tin log mở cửa từ thiết bị
   @MessagePattern(MQTT_TOPICS.DOOR_LOG)
   async handleDoorLog(@Payload() data: any, @Ctx() context: MqttContext) {
     const topic = context.getTopic();
@@ -89,7 +87,6 @@ export class SmartLockController {
     return this.smartLockService.processDoorLog(deviceId, data);
   }
 
-  // Xử lý phản hồi từ lệnh mở cửa
   @MessagePattern(MQTT_TOPICS.UNLOCK_DOOR_STATUS)
   async handleUnlockDoorStatus(
     @Payload() data: any,
@@ -100,7 +97,6 @@ export class SmartLockController {
     return this.smartLockService.processUnlockDoorStatus(deviceId, data);
   }
 
-  // Xử lý phản hồi từ lệnh khóa cửa
   @MessagePattern(MQTT_TOPICS.LOCK_DOOR_STATUS)
   async handleLockDoorStatus(
     @Payload() data: any,
@@ -111,7 +107,6 @@ export class SmartLockController {
     return this.smartLockService.processLockDoorStatus(deviceId, data);
   }
 
-  // Xử lý phản hồi từ lệnh đổi mật khẩu
   @MessagePattern(MQTT_TOPICS.CHANGE_PASS_STATUS)
   async handleChangePasswordStatus(
     @Payload() data: any,

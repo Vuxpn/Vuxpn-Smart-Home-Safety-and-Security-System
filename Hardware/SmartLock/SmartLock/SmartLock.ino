@@ -55,11 +55,15 @@ const int PASSWORD_LENGTH = 6;
 const int MAX_ATTEMPTS = 5;
 const unsigned long LOCKOUT_TIME = 30000; // 30s timeout after 5 incorrect attempts
 const unsigned long OPENDOOR_TIME = 30000;
-const unsigned long LED_TIME = 2000; // 2s timeout turn on led
+const unsigned long LED_TIME = 2000; 
 const int EEPROM_SIZE = 512;
 const int PASSWORD_ADDRESS = 0;
-const unsigned long STATUS_INTERVAL = 10000; // 10 giây
+const unsigned long STATUS_INTERVAL = 10000; 
 unsigned long lastStatusTime = 0;
+bool pendingPasswordSave = false;
+char pendingNewPassword[PASSWORD_LENGTH + 1];
+unsigned long passwordSaveTime = 0;
+const unsigned long PASSWORD_SAVE_DELAY = 2000;
 
 // Global variables
 char currentPassword[PASSWORD_LENGTH + 1] = "123456"; // Default password
@@ -265,6 +269,7 @@ void loop() {
   updateSoundSuccess();
   updateSoundFailure();
   updateSoundAlarm();
+  handlePendingPasswordSave();
   //Send status
   unsigned long currentTime = millis();
   if (currentTime - lastStatusTime >= STATUS_INTERVAL) {
@@ -356,27 +361,35 @@ void sendVerificationResponse() {
 }
 
 void handleConnection(const JsonDocument& doc) {
-  if (doc["data"]["deviceId"] == MAC_ADDRESS) {
+  String receivedDeviceId = doc["data"]["deviceId"];
+
+  if (receivedDeviceId == MAC_ADDRESS) {
     isConnected = true;
-    sendConnectionStatus(true);
+    String responseTopic = "iot/device/" + MAC_ADDRESS + "/connect/response";
+    StaticJsonDocument<200> response;
+    response["connected"] = true;
+    response["deviceId"] = MAC_ADDRESS;
+
+    String responseMessage;
+    serializeJson(response, responseMessage);
+    publishMessage(responseTopic, responseMessage);
   }
 }
 
 void handleDisconnection(const JsonDocument& doc) {
-  if (doc["data"]["deviceId"] == MAC_ADDRESS) {
-    isConnected = false;
-    sendConnectionStatus(false);
-  }
-}
+  String receivedDeviceId = doc["data"]["deviceId"];
 
-void sendConnectionStatus(bool connected) {
-  StaticJsonDocument<128> doc;
-  doc[connected ? "connected" : "disconnected"] = true;
-  doc["deviceId"] = MAC_ADDRESS;
-  
-  String payload;
-  serializeJson(doc, payload);
-  publishMessage(BASE_TOPIC + MAC_ADDRESS + "/status", payload);
+  if (receivedDeviceId == MAC_ADDRESS) {
+    isConnected = false;
+    String responseTopic = "iot/device/" + MAC_ADDRESS + "/disconnect/response";
+    StaticJsonDocument<200> response;
+    response["disconnected"] = true;
+    response["deviceId"] = MAC_ADDRESS;
+
+    String responseMessage;
+    serializeJson(response, responseMessage);
+    publishMessage(responseTopic, responseMessage);
+  }
 }
 
 void handleOpenDoor(const JsonDocument& doc){
@@ -450,16 +463,31 @@ void handleChangePassword(const JsonDocument& doc) {
       showDefaultScreen();
       //sendFailedChangePassword();
     } else {
+      sendSuccessChangePassword();
       strcpy(currentPassword, newPassword);
-      savePassword();
+
+      strcpy(pendingNewPassword, newPassword);
+      pendingPasswordSave = true;
+      passwordSaveTime = millis();
+      
       Serial.print("Password changed successfully: ");
       Serial.println(currentPassword);
       ledSuccess();
-      showChangeSuccess(); 
-      //sendSuccessChangePassword();
+      showChangeSuccess();
+      
     }
   }
   yield();
+}
+
+void handlePendingPasswordSave() {
+  if (pendingPasswordSave && millis() - passwordSaveTime >= PASSWORD_SAVE_DELAY) {
+    client.setCallback(nullptr);
+    savePassword();
+    client.setCallback(mqttCallback);
+    pendingPasswordSave = false;
+    Serial.println("Password saved to EEPROM asynchronously");
+  }
 }
 
 void sendFailedChangePassword() {

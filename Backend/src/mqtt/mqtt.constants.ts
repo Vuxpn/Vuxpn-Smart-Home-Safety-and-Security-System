@@ -31,7 +31,8 @@ export const MQTT_TOPICS = {
   CHANGE_MODE: 'iot/device/pir/mode',
   WARNING_DETECT: 'iot/device/pir/buzzer',
   CHANGE_TIME_BUZZER: 'iot/device/pir/buzzer_duration',
-  MOTION_DETECTED: 'iot/device/pir/status',
+  MOTION_DETECTED_STATUS: 'iot/device/+/pir/status',
+  MODE_STATUS: 'iot/device/+/pir/mode/status',
 
   //led Control
   LED_CONTROL: 'iot/control/led',

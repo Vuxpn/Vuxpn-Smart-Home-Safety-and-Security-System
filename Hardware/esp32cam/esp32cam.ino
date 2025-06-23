@@ -11,13 +11,13 @@ const char* WIFI_SSID = "Vuxpn";
 const char* WIFI_PASS = "12345678";
 
 // MQTT Configuration
-const char* MQTT_BROKER = "e6b1298d0857429c89f18a2890b4f84c.s1.eu.hivemq.cloud";
+const char* MQTT_BROKER = "l652a6f1.ala.asia-southeast1.emqxsl.com";
 const char* MQTT_USER = "vuphan";
 const char* MQTT_PASS = "Vu15102003@";
 const int MQTT_PORT = 8883;
 
 // HTTP Server settings
-String serverName = "192.168.26.167";   
+String serverName = "192.168.151.167";   
 String serverPath = "/detectionwarning/upload/thietbi5";
 const int serverPort = 3001;
 
@@ -72,7 +72,7 @@ void setupCamera() {
     config.pixel_format = PIXFORMAT_JPEG;
     config.frame_size = FRAMESIZE_VGA;
     config.jpeg_quality = 12;
-    config.fb_count = 1;  // Reduced from 2 to 1 to avoid frame buffering
+    config.fb_count = 1;  
 
     esp_err_t err = esp_camera_init(&config);
     if (err != ESP_OK) {
@@ -80,11 +80,28 @@ void setupCamera() {
         ESP.restart();
     }
 
-    // Initial camera settings
+   
     sensor_t * s = esp_camera_sensor_get();
     s->set_contrast(s, 2);
     s->set_brightness(s, 2);
     s->set_saturation(s, 2);
+    
+    clearCameraBuffer();
+}
+
+
+void clearCameraBuffer() {
+    Serial.println("Clearing camera buffer...");
+    
+    for (int i = 0; i < 5; i++) {
+        camera_fb_t * fb = esp_camera_fb_get();
+        if (fb) {
+            esp_camera_fb_return(fb);
+            delay(50); 
+        }
+    }
+    
+    Serial.println("Camera buffer cleared");
 }
 
 void connectWiFi() {
@@ -103,17 +120,11 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     }
     Serial.println("Message arrived ["+String(topic)+"]"+ message);
     
-    if (String(topic) == "iot/device/pir/status") {
+    if (String(topic) == "iot/device/thietbi5/pir/status") {
         StaticJsonDocument<200> doc;
         if (!deserializeJson(doc, message)) {
             if (doc["status"] == "motion_detected") {
-                // Clear any pending camera operations
-                camera_fb_t * fb = NULL;
-                esp_camera_fb_return(fb);
-                
-                // Small delay to ensure camera is ready
-                delay(100);
-                
+                Serial.println("Motion detected - capturing fresh image...");
                 captureAndUpload();
             }
         }
@@ -124,7 +135,7 @@ void reconnectMQTT() {
     while (!mqttClient.connected()) {
         String clientId = "ESP32-CAM-" + String(random(0xffff), HEX);
         if (mqttClient.connect(clientId.c_str(), MQTT_USER, MQTT_PASS)) {
-            mqttClient.subscribe("iot/device/pir/status");
+            mqttClient.subscribe("iot/device/thietbi5/pir/status");
             Serial.println("MQTT connected");
         } else {
             delay(5000);
@@ -136,26 +147,35 @@ String captureAndUpload() {
     String getAll;
     String getBody;
     
-    // Turn on flash before capture
-    digitalWrite(FLASH_PIN, HIGH);
-    delay(100);  // Wait for flash to stabilize
+    Serial.println("Starting fresh capture...");
     
-    // Clear any existing frames
     camera_fb_t * fb = NULL;
-    esp_camera_fb_return(fb);
     
-    // Get fresh frame
+    for (int i = 0; i < 3; i++) {
+        fb = esp_camera_fb_get();
+        if (fb) {
+            esp_camera_fb_return(fb);
+            delay(30); 
+        }
+    }
+    
+    delay(100);
+    
+    digitalWrite(FLASH_PIN, HIGH);
+    delay(150);  
+    
     fb = esp_camera_fb_get();
     
-    // Turn off flash immediately after capture
     digitalWrite(FLASH_PIN, LOW);
 
     if(!fb) {
-        Serial.println("Camera capture failed");
+        Serial.println("Fresh camera capture failed");
         return "Camera capture failed";
     }
 
-    String filename = "esp32-cam-" + String(millis()) + ".jpg";
+    Serial.printf("Captured fresh frame: %d bytes\n", fb->len);
+
+    String filename = "esp32-cam-fresh-" + String(millis()) + ".jpg";
 
     if (httpClient.connect(serverName.c_str(), serverPort)) {
         String boundary = "Vuxpn";
@@ -174,7 +194,6 @@ String captureAndUpload() {
         httpClient.println();
         httpClient.print(head);
 
-        // Send image data in smaller chunks
         uint8_t *fbBuf = fb->buf;
         const size_t BLOCK_SIZE = 1024;
         size_t fbLen = fb->len;
@@ -182,18 +201,17 @@ String captureAndUpload() {
         for (size_t n=0; n<fbLen; n+=BLOCK_SIZE) {
             size_t writeSize = min(BLOCK_SIZE, fbLen - n);
             httpClient.write(fbBuf + n, writeSize);
-            // Small delay to prevent buffer overflow
             delay(1);
         }
         
         httpClient.print(tail);
         
-        // Release camera buffer immediately after sending
         esp_camera_fb_return(fb);
         
-        // Read response
+        Serial.println("Fresh image uploaded successfully");
+        
         unsigned long timeout = millis();
-        while (millis() - timeout < 5000) {  // Reduced timeout to 5 seconds
+        while (millis() - timeout < 5000) {
             while (httpClient.available()) {
                 char c = httpClient.read();
                 if (c == '\n' && getAll.length() == 0) {
@@ -228,6 +246,8 @@ void setup() {
     secureClient.setInsecure();
     mqttClient.setServer(MQTT_BROKER, MQTT_PORT);
     mqttClient.setCallback(mqttCallback);
+    
+    Serial.println("ESP32-CAM ready for fresh captures!");
 }
 
 void loop() {

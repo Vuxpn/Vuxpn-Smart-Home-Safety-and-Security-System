@@ -19,6 +19,13 @@ import { Public } from 'src/auth/decorators/public.decorator';
 import { SystemMode } from './dto/detection.dto';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import {
+  Ctx,
+  MessagePattern,
+  MqttContext,
+  Payload,
+} from '@nestjs/microservices';
+import { MQTT_TOPICS } from 'src/mqtt/mqtt.constants';
 
 @ApiTags('Detectionwarning')
 @Controller('detectionwarning')
@@ -105,5 +112,49 @@ export class DetectionWarningController {
       console.error('Error turning off warning:', error);
       throw error;
     }
+  }
+
+  @MessagePattern(MQTT_TOPICS.MOTION_DETECTED_STATUS)
+  async handleMotionDetection(
+    @Payload() data: any,
+    @Ctx() context: MqttContext,
+  ) {
+    const topic = context.getTopic();
+    const deviceId = topic.split('/')[2];
+
+    console.log('PIR motion detected:', { deviceId, data });
+
+    if (data.status === 'motion_detected') {
+      console.log(`Motion detected on device ${deviceId} at ${new Date()}`);
+    }
+
+    return {
+      success: true,
+      message: 'Motion detection processed',
+      deviceId,
+      timestamp: new Date(),
+    };
+  }
+
+  @MessagePattern(MQTT_TOPICS.MODE_STATUS)
+  async handleModeChange(@Payload() data: any, @Ctx() context: MqttContext) {
+    const topic = context.getTopic();
+    const deviceId = topic.split('/')[2];
+
+    console.log('PIR mode changed:', { deviceId, data });
+
+    if (data.status === 'mode_changed') {
+      console.log(
+        `Device ${deviceId} mode changed to ${data.current_mode} at ${new Date()}`,
+      );
+    }
+
+    return {
+      success: true,
+      message: 'Mode change processed',
+      deviceId,
+      mode: data.current_mode,
+      timestamp: new Date(),
+    };
   }
 }

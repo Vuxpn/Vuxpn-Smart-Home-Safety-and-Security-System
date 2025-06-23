@@ -13,7 +13,7 @@ interface SecurityCameraControlsProps {
 const SecurityCameraControls: React.FC<SecurityCameraControlsProps> = ({ deviceId, name }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [isWarningEnabled, setIsWarningEnabled] = useState(false);
-    const [detectionMode, setDetectionMode] = useState<'normal' | 'safe'>('normal');
+    const [detectionMode, setDetectionMode] = useState<'normal' | 'safe'>('safe');
     const [ledTimeout, setLedTimeout] = useState(30);
     const [buzzerTimeout, setBuzzerTimeout] = useState(10);
     const [showSettings, setShowSettings] = useState(false);
@@ -32,7 +32,10 @@ const SecurityCameraControls: React.FC<SecurityCameraControlsProps> = ({ deviceI
             setIsLoadingImage(true);
             const response = await detectionService.getDetectionHistory(deviceId);
             if (response.success && response.data && response.data.length > 0) {
-                const latestDetection = response.data[0];
+                const sortedData = response.data.sort(
+                    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+                );
+                const latestDetection = sortedData[0];
                 if (latestDetection.url) {
                     setLatestImage(latestDetection.url);
                 }

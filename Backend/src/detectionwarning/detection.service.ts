@@ -92,6 +92,7 @@ export class DetectionWarningService {
     return await this.imageModel
       .find({ deviceId: device._id })
       .populate('deviceId')
+      .sort({ createdAt: -1 })
       .exec();
   }
 

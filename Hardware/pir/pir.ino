@@ -6,7 +6,7 @@
 // Constants
 const char* SSID = "Vuxpn";
 const char* PASSWORD = "12345678";
-const char* MQTT_BROKER = "e6b1298d0857429c89f18a2890b4f84c.s1.eu.hivemq.cloud";
+const char* MQTT_BROKER = "l652a6f1.ala.asia-southeast1.emqxsl.com";
 const char* MQTT_USERNAME = "vuphan";
 const char* MQTT_PASSWORD = "Vu15102003@";
 const int MQTT_PORT = 8883;
@@ -18,7 +18,7 @@ const int BUZZER_PIN = 21;
 
 // MQTT Topics
 const String BASE_TOPIC = "iot/device/";
-const String MAC_ADDRESS = "thietbi5"; // Should use real MAC
+const String MAC_ADDRESS = "thietbi5"; 
 
 // System parameters
 const unsigned long DEBOUNCE_TIME_MS = 2000;
@@ -27,13 +27,18 @@ unsigned long buzzerDuration = 5000;
 volatile bool motionDetected = false;
 unsigned long lastTrigger = 0;
 
+//Buzzer control states
+bool manualBuzzerControl = false;  
+bool manualBuzzerState = false;   
+unsigned long motionBuzzerEndTime = 0;
+
 enum class SystemMode { NORMAL, SAFE };
 SystemMode currentMode = SystemMode::SAFE;
 
 // MQTT
 WiFiClientSecure espClient;
 PubSubClient client(espClient);
-bool isConnected = false; // Added missing variable
+bool isConnected = false; 
 
 void setup() {
   Serial.begin(115200);
@@ -46,6 +51,7 @@ void loop() {
   maintainMQTTConnection();
   handleMotionDetection();
   updateIndicatorLED();
+  updateBuzzer();
 }
 
 // Interrupt Service Routine
@@ -58,6 +64,7 @@ void initializeHardware() {
   pinMode(MOTION_SENSOR_PIN, INPUT_PULLUP);
   pinMode(LED_PIN, OUTPUT);
   pinMode(BUZZER_PIN, OUTPUT);
+  digitalWrite(BUZZER_PIN, LOW);
   attachInterrupt(digitalPinToInterrupt(MOTION_SENSOR_PIN), handleMotionInterrupt, RISING);
 }
 
@@ -162,7 +169,24 @@ void triggerSecurityActions() {
 }
 
 void activateBuzzer() {
-  tone(BUZZER_PIN, 1000, buzzerDuration);
+   if (!manualBuzzerControl) {
+    motionBuzzerEndTime = millis() + buzzerDuration;
+    Serial.println("Motion buzzer activated for " + String(buzzerDuration) + "ms");
+  } else {
+    Serial.println("Motion buzzer skipped - manual control active");
+  }
+}
+
+void updateBuzzer() {
+  if (manualBuzzerControl) {
+    digitalWrite(BUZZER_PIN, manualBuzzerState ? HIGH : LOW);
+  } else {
+    if (millis() < motionBuzzerEndTime) {
+      digitalWrite(BUZZER_PIN, HIGH);
+    } else {
+      digitalWrite(BUZZER_PIN, LOW);
+    }
+  }
 }
 
 void sendAlertNotification() {
@@ -172,7 +196,7 @@ void sendAlertNotification() {
   
   String payload;
   serializeJson(doc, payload);
-  publishMessage(BASE_TOPIC + "pir/status", payload);
+  publishMessage(BASE_TOPIC+ MAC_ADDRESS + "/pir/status", payload);
 }
 
 // Utility functions
@@ -200,16 +224,34 @@ void sendVerificationResponse() {
 }
 
 void handleConnection(const JsonDocument& doc) {
-  if (doc["data"]["deviceId"] == MAC_ADDRESS) {
+  String receivedDeviceId = doc["data"]["deviceId"];
+
+  if (receivedDeviceId == MAC_ADDRESS) {
     isConnected = true;
-    sendConnectionStatus(true);
+    String responseTopic = "iot/device/" + MAC_ADDRESS + "/connect/response";
+    StaticJsonDocument<200> response;
+    response["connected"] = true;
+    response["deviceId"] = MAC_ADDRESS;
+
+    String responseMessage;
+    serializeJson(response, responseMessage);
+    publishMessage(responseTopic, responseMessage);
   }
 }
 
 void handleDisconnection(const JsonDocument& doc) {
-  if (doc["data"]["deviceId"] == MAC_ADDRESS) {
+  String receivedDeviceId = doc["data"]["deviceId"];
+
+  if (receivedDeviceId == MAC_ADDRESS) {
     isConnected = false;
-    sendConnectionStatus(false);
+    String responseTopic = "iot/device/" + MAC_ADDRESS + "/disconnect/response";
+    StaticJsonDocument<200> response;
+    response["disconnected"] = true;
+    response["deviceId"] = MAC_ADDRESS;
+
+    String responseMessage;
+    serializeJson(response, responseMessage);
+    publishMessage(responseTopic, responseMessage);
   }
 }
 
@@ -239,7 +281,7 @@ void sendModeConfirmation() {
   
   String payload;
   serializeJson(doc, payload);
-  publishMessage(BASE_TOPIC + "pir/mode/status", payload);
+  publishMessage(BASE_TOPIC+ MAC_ADDRESS + "/pir/mode/status", payload);
 }
 
 void handleBuzzerControl(const JsonDocument& doc) {
@@ -247,9 +289,14 @@ void handleBuzzerControl(const JsonDocument& doc) {
   state.toLowerCase();
   
   if (state == "on" || state == "1") {
-    tone(BUZZER_PIN, 1000, buzzerDuration);  // Use tone() instead of digitalWrite()
-  } else {
-    noTone(BUZZER_PIN);  // Stop the buzzer
+    manualBuzzerControl = true;
+    manualBuzzerState = true;
+    Serial.println("Manual buzzer: ON");
+    sendAlertNotification();
+  } else if (state == "off" || state == "0") {
+    manualBuzzerControl = false;
+    digitalWrite(BUZZER_PIN, LOW);
+    Serial.println("Manual buzzer: OFF");
   }
 }
 

@@ -80,25 +80,13 @@ const SmartLockControls: React.FC<SmartLockControlsProps> = ({ deviceId, name, o
     };
 
     const handleLock = async () => {
-        try {
-            setIsLocking(true);
-            const response = await smartLockService.lockDoor(deviceId);
+        setIsLocked(true);
+        showToast('success', 'Thành công', `Đã khóa ${name}`);
+        if (onRefreshStatus) onRefreshStatus();
 
-            if (response.success) {
-                showToast('success', 'Thành công', response.message || `Đã khóa ${name}`);
-                // Cập nhật trạng thái và thông báo người dùng
-                setIsLocked(true);
-                // Gọi hàm làm mới trạng thái nếu có
-                if (onRefreshStatus) onRefreshStatus();
-            } else {
-                showToast('error', 'Lỗi', response.message || 'Không thể khóa');
-            }
-        } catch (error: any) {
-            const errorMsg = error.message || 'Không thể khóa';
-            showToast('error', 'Lỗi', errorMsg);
-        } finally {
-            setIsLocking(false);
-        }
+        smartLockService.lockDoor(deviceId).catch((error) => {
+            console.error('Background lock error:', error);
+        });
     };
 
     const handleChangePassword = async () => {
@@ -199,19 +187,9 @@ const SmartLockControls: React.FC<SmartLockControlsProps> = ({ deviceId, name, o
                     )}
                 </TouchableOpacity>
 
-                <TouchableOpacity
-                    style={[styles.actionButton, styles.lockButton]}
-                    onPress={handleLock}
-                    disabled={isLocking}
-                >
-                    {isLocking ? (
-                        <ActivityIndicator color="white" size="small" />
-                    ) : (
-                        <>
-                            <MaterialIcons name="lock" size={24} color="white" />
-                            <Text style={styles.actionButtonText}>Khóa</Text>
-                        </>
-                    )}
+                <TouchableOpacity style={[styles.actionButton, styles.lockButton]} onPress={handleLock}>
+                    <MaterialIcons name="lock" size={24} color="white" />
+                    <Text style={styles.actionButtonText}>Khóa</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
